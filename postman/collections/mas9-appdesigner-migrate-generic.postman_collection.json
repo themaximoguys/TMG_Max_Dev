@@ -1,0 +1,411 @@
+{
+  "info": {
+    "name": "MAS 9 - Application Designer Migrate (Generic)",
+    "description": "Extract → Git → Deploy for MAS 9 Application Designer screen definitions.\n\n────────────────────────────────────────────────────────\nEXTRACTION APPROACH\n────────────────────────────────────────────────────────\n  Reads from MAXPRESENTATION table via the TMG_EXPORT_PRES\n  autoscript (script handler endpoint /api/script/).\n  mxapiappdesign OS is NOT required for extraction.\n\n────────────────────────────────────────────────────────\nPREREQUISITE — Deploy TMG_EXPORT_PRES first:\n────────────────────────────────────────────────────────\n  Run Folder 0 (Setup) once per environment before extracting.\n  TMG_EXPORT_PRES reads MAXPRESENTATION via Jython MboSet API.\n  Run Setup on each target environment\n  and any other target environment before using Extract.\n\n────────────────────────────────────────────────────────\nFOLDERS\n────────────────────────────────────────────────────────\n  0. Setup   — Deploy TMG_EXPORT_PRES autoscript (one-time per env)\n  1. Extract — List all apps + Extract XML for a specific app\n  2. Deploy  — POST app definition to target (requires mxapiappdesign OS)\n  3. Update  — PATCH screen changes to existing app on target\n  4. Verify  — GET to confirm app exists on target\n  5. Rollback — DELETE app and presentations from target\n\n────────────────────────────────────────────────────────\nENVIRONMENT VARIABLES\n────────────────────────────────────────────────────────\n  baseUrl    MAS base URL including /maximo  (e.g. https://host/maximo)\n  apikey     MAS API key\n  app        Application name in UPPERCASE  (e.g. WOTRACK, ASSET)\n  xmlPayload Raw XML string saved by the Extract step\n\n────────────────────────────────────────────────────────\nGIT STORAGE FORMAT\n────────────────────────────────────────────────────────\n  configs/06-app-designer/<APPNAME>/<PRESENTID>.xml\n  Each presentation saved as a standalone XML file.\n  After Extract, use Save Response → Save to a file in Postman.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      { "key": "key",   "value": "apikey",     "type": "string" },
+      { "key": "value", "value": "{{apikey}}", "type": "string" },
+      { "key": "in",    "value": "header",     "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl",    "value": "" },
+    { "key": "apikey",     "value": "" },
+    { "key": "app",        "value": "" },
+    { "key": "xmlPayload", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "0. Setup — Deploy Export Script",
+      "description": "Deploy TMG_EXPORT_PRES autoscript once per environment before running Extract.\nAlready deployed on  Dev. Run here for mvndemo02 or any new environment.",
+      "item": [
+        {
+          "name": "Deploy TMG_EXPORT_PRES (one-time per env)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Decode source from base64 to avoid escaping issues in collection JSON",
+                  "var src = atob('IyBUTUdfRVhQT1JUX1BSRVMg4oCUIFJFU1Qgc2NyaXB0IGhhbmRsZXI6IEdFVCAvbWF4aW1vL2FwaS9zY3JpcHQvVE1HX0VYUE9SVF9QUkVTP2FwcD1XT1RSQUNLCiMgUmV0dXJucyB0aGUgQXBwIERlc2lnbmVyIHByZXNlbnRhdGlvbiBYTUwgZm9yIG9uZSBhcHAsIG9yIHRoZSBsaXN0IG9mIGFwcCBuYW1lcyB3aGVuCiMgbm8gYXBwIGlzIGdpdmVuLiBVc2VkIGJ5IG1heGRldiBleHRyYWN0L2RpZmYgZm9yIGFwcHhtbCB3aGVuIE1YQVBJUFJFU0VOVEFUSU9OIGRvZXMgbm90CiMgcmV0dXJuIHRoZSBQUkVTRU5UQVRJT04gQ0xPQi4gUmVhZC1vbmx5LgppbXBvcnQgcmUKZnJvbSBwc2RpLnNlcnZlciBpbXBvcnQgTVhTZXJ2ZXIKCm14ID0gTVhTZXJ2ZXIuZ2V0TVhTZXJ2ZXIoKQp1aSA9IG14LmdldFN5c3RlbVVzZXJJbmZvKCkKCmFwcCA9IE5vbmUKdHJ5OgogICAgYXBwID0gcmVxdWVzdC5nZXRRdWVyeVBhcmFtKCJhcHAiKQpleGNlcHQ6CiAgICBhcHAgPSBOb25lCgojIEFwcCBuYW1lcyBhcmUgW0EtWjAtOV9dOyByZWplY3QgYW55dGhpbmcgZWxzZSBpbnN0ZWFkIG9mIGJ1aWxkaW5nIFNRTCBmcm9tIGl0LgppZiBhcHAgYW5kIG5vdCByZS5tYXRjaChyIl5bQS1aYS16MC05X117MSwzMH0kIiwgYXBwKToKICAgIHJlc3BvbnNlQm9keSA9ICJJTlZBTElEIEFQUCBOQU1FIgplbHNlOgogICAgcHNldCA9IG14LmdldE1ib1NldCgiTUFYUFJFU0VOVEFUSU9OIiwgdWkpCiAgICB0cnk6CiAgICAgICAgaWYgYXBwOgogICAgICAgICAgICBwc2V0LnNldFdoZXJlKCJhcHAgPSAnJXMnIiAlIGFwcC51cHBlcigpKQogICAgICAgICAgICBwc2V0LnJlc2V0KCkKICAgICAgICAgICAgbSA9IHBzZXQuZ2V0TWJvKDApCiAgICAgICAgICAgIGlmIG0gaXMgTm9uZToKICAgICAgICAgICAgICAgIHJlc3BvbnNlQm9keSA9ICJOT1QgRk9VTkQ6ICIgKyBhcHAKICAgICAgICAgICAgZWxzZToKICAgICAgICAgICAgICAgIHJlc3BvbnNlQm9keSA9IG0uZ2V0U3RyaW5nKCJQUkVTRU5UQVRJT04iKQogICAgICAgIGVsc2U6CiAgICAgICAgICAgIHBzZXQuc2V0T3JkZXJCeSgiYXBwIikKICAgICAgICAgICAgcHNldC5yZXNldCgpCiAgICAgICAgICAgIG5hbWVzID0gW10KICAgICAgICAgICAgbSA9IHBzZXQubW92ZUZpcnN0KCkKICAgICAgICAgICAgd2hpbGUgbSBpcyBub3QgTm9uZToKICAgICAgICAgICAgICAgIG5hbWVzLmFwcGVuZChtLmdldFN0cmluZygiQVBQIikpCiAgICAgICAgICAgICAgICBtID0gcHNldC5tb3ZlTmV4dCgpCiAgICAgICAgICAgIHJlc3BvbnNlQm9keSA9ICJcbiIuam9pbihuYW1lcykKICAgIGZpbmFsbHk6CiAgICAgICAgcHNldC5jbG9zZSgpCg==');",
+                  "pm.request.body.update({",
+                  "    mode: 'raw',",
+                  "    raw: JSON.stringify({",
+                  "        autoscript: 'TMG_EXPORT_PRES',",
+                  "        description: 'Export MAS presentation XML from MAXPRESENTATION via script handler',",
+                  "        active: true,",
+                  "        scriptlanguage: 'python',",
+                  "        source: src",
+                  "    })",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var code = pm.response.code;",
+                  "if (code === 201) {",
+                  "    console.log('SUCCESS: TMG_EXPORT_PRES deployed to ' + pm.variables.get('baseUrl'));",
+                  "} else {",
+                  "    pm.test('Deploy TMG_EXPORT_PRES (201)', function() { pm.response.to.have.status(201); });",
+                  "    try { console.error('Response:', JSON.stringify(pm.response.json())); } catch(e) { console.error(pm.response.text()); }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": {
+              "raw": "{{baseUrl}}/api/os/mxapiautoscript?lean=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "os", "mxapiautoscript"],
+              "query": [{ "key": "lean", "value": "1" }]
+            },
+            "description": "POST to create TMG_EXPORT_PRES autoscript on this environment.\nPre-request script builds the JSON body from base64-encoded Python source.\nRun once per environment. If it already exists, delete it first via MAS UI → Automation Scripts."
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Extract",
+      "description": "Extract app screen XML from MAXPRESENTATION via TMG_EXPORT_PRES script handler.\nNo mxapiappdesign OS required — reads MAXPRESENTATION directly via Jython.",
+      "item": [
+        {
+          "name": "List Apps (discovery)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[List] GET 200', function() { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) return;",
+                  "var txt = '';",
+                  "try { txt = pm.response.json().responseBody || ''; } catch(e) { txt = pm.response.text(); }",
+                  "var apps = txt.split('\\n').filter(function(s) { return s.trim().length > 0; });",
+                  "pm.test('Apps listed: ' + apps.length, function() { pm.expect(apps.length).to.be.above(0); });",
+                  "console.log('Apps in MAXPRESENTATION (' + apps.length + '):');",
+                  "apps.forEach(function(a) { console.log('  ', a.trim()); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/script/TMG_EXPORT_PRES?lean=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "script", "TMG_EXPORT_PRES"],
+              "query": [{ "key": "lean", "value": "1" }]
+            },
+            "description": "GET without app param — returns newline-separated list of all apps in MAXPRESENTATION.\nUse this to discover which apps are available before extracting XML."
+          }
+        },
+        {
+          "name": "Extract: {{app}}",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var base = (pm.variables.get('baseUrl') || '').replace(/\\/+$/, '');",
+                  "var app  = (pm.variables.get('app') || '').trim().toUpperCase();",
+                  "if (!app) { throw new Error('app variable is empty — set it in the environment (e.g. WOTRACK)'); }",
+                  "pm.request.url.update(base + '/api/script/TMG_EXPORT_PRES?lean=1&app=' + app);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var app = (pm.variables.get('app') || '').toUpperCase();",
+                  "pm.test('[Extract] GET 200', function() { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) return;",
+                  "var xml = '';",
+                  "try { xml = pm.response.json().responseBody || ''; } catch(e) { xml = pm.response.text(); }",
+                  "if (!xml || xml.indexOf('NOT FOUND') === 0) {",
+                  "    pm.test('[Extract] App found: ' + app, function() { pm.expect.fail('App not found: ' + app + ' — check List Apps first'); });",
+                  "    return;",
+                  "}",
+                  "pm.collectionVariables.set('xmlPayload', xml);",
+                  "pm.test('[Extract] XML retrieved: ' + app, function() { pm.expect(xml.length).to.be.above(100); });",
+                  "var kb = (xml.length / 1024).toFixed(1);",
+                  "var gitPath = 'configs/06-app-designer/' + app + '/<PRESENTID>.xml';",
+                  "function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }",
+                  "var prev = esc(xml.substring(0, 900));",
+                  "var html = '<style>body{font-family:Arial,sans-serif;font-size:12px;padding:10px}';",
+                  "html += 'h2{color:#1a5276;margin:0 0 8px}';",
+                  "html += '.meta{background:#eaf2ff;padding:8px 12px;border-radius:4px;margin-bottom:10px;line-height:1.8}';",
+                  "html += 'pre{background:#272822;color:#a6e22e;padding:10px;border-radius:4px;font-size:10px;overflow:auto;white-space:pre-wrap;word-break:break-all;max-height:400px}';",
+                  "html += '.hint{background:#f0f4c3;padding:8px 12px;border-radius:4px;margin-top:10px;font-size:11px;font-family:monospace}</style>';",
+                  "html += '<h2>' + esc(app) + ' — Application XML</h2>';",
+                  "html += '<div class=\"meta\">';",
+                  "html += '<b>Size:</b> ' + kb + ' KB &nbsp;|&nbsp; ';",
+                  "html += '<b>Source:</b> MAXPRESENTATION &nbsp;|&nbsp; ';",
+                  "html += '<b>Git path:</b> <code>' + esc(gitPath) + '</code>';",
+                  "html += '</div>';",
+                  "html += '<pre>' + prev + (xml.length > 900 ? '\\n\\n... (' + kb + ' KB total — Save Response to file for full XML)' : '') + '</pre>';",
+                  "html += '<div class=\"hint\">Save full XML: Send → Save Response → Save to a file<br>';",
+                  "html += 'Git: ' + esc(gitPath) + '</div>';",
+                  "pm.visualizer.set('{{{html}}}', { html: html });",
+                  "console.log('EXTRACTED: ' + app + ' | ' + kb + ' KB | saved to xmlPayload variable');",
+                  "console.log('Git path: ' + gitPath);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/script/TMG_EXPORT_PRES?lean=1&app={{app}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "script", "TMG_EXPORT_PRES"],
+              "query": [
+                { "key": "lean", "value": "1" },
+                { "key": "app",  "value": "{{app}}" }
+              ]
+            },
+            "description": "GET app XML from MAXPRESENTATION via TMG_EXPORT_PRES script handler.\nPre-request builds URL manually to prevent Postman encoding the app param.\nResponse is the raw XML string for the app's first presentation.\nSaved to xmlPayload collection variable. Visualize tab shows XML preview + Git path.\nTo save the full XML: Send → Save Response → Save to a file."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Deploy",
+      "description": "POST app definition to target environment.\nREQUIRES mxapiappdesign OS to be enabled by admin on the target:\n  Integration → Object Structures → MXAPIAPPDESIGN → External Access = Enabled",
+      "item": [
+        {
+          "name": "Deploy: {{app}}",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var raw = pm.variables.get('payload') || '{}';",
+                  "try {",
+                  "    var payload = JSON.parse(raw);",
+                  "    if (payload.member && Array.isArray(payload.member)) payload = payload.member[0] || {};",
+                  "    var STRIP_KEYS   = ['href','_rowstamp','localref','_id','responseInfo'];",
+                  "    var STRIP_SUFFIX = ['_collectionref'];",
+                  "    function isStripped(k) {",
+                  "        if (STRIP_KEYS.indexOf(k) >= 0) return true;",
+                  "        for (var i = 0; i < STRIP_SUFFIX.length; i++) { if (k.indexOf(STRIP_SUFFIX[i]) >= 0) return true; }",
+                  "        return false;",
+                  "    }",
+                  "    function clean(obj) {",
+                  "        if (Array.isArray(obj)) return obj.map(clean);",
+                  "        if (obj !== null && typeof obj === 'object') {",
+                  "            var out = {};",
+                  "            Object.keys(obj).forEach(function(k) { if (!isStripped(k)) out[k] = clean(obj[k]); });",
+                  "            return out;",
+                  "        }",
+                  "        return obj;",
+                  "    }",
+                  "    pm.request.body.update({ mode: 'raw', raw: JSON.stringify(clean(payload), null, 2) });",
+                  "} catch(e) { console.error('payload parse error:', e.message); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var appName = pm.variables.get('app');",
+                  "pm.test('[Deploy] POST returned 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) console.log('DEPLOYED APP:', appName);",
+                  "else console.error('FAILED:', pm.response.code, pm.response.text());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": {
+              "raw": "{{baseUrl}}/api/os/mxapiappdesign?lean=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "os", "mxapiappdesign"],
+              "query": [{ "key": "lean", "value": "1" }]
+            },
+            "description": "POST app definition to target. Reads from 'payload' collection variable — run Extract first, or paste JSON from Git.\nREQUIRES mxapiappdesign OS to be enabled: Integration → Object Structures → MXAPIAPPDESIGN → External Access = Enabled."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Update",
+      "description": "PATCH screen changes to an existing app on target. Requires mxapiappdesign OS enabled.",
+      "item": [
+        {
+          "name": "Update: {{app}}",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var raw = pm.variables.get('payload') || '{}';",
+                  "try {",
+                  "    var payload = JSON.parse(raw);",
+                  "    if (payload.member && Array.isArray(payload.member)) payload = payload.member[0] || {};",
+                  "    var STRIP_KEYS   = ['href','_rowstamp','localref','_id','responseInfo'];",
+                  "    var STRIP_SUFFIX = ['_collectionref'];",
+                  "    function isStripped(k) {",
+                  "        if (STRIP_KEYS.indexOf(k) >= 0) return true;",
+                  "        for (var i = 0; i < STRIP_SUFFIX.length; i++) { if (k.indexOf(STRIP_SUFFIX[i]) >= 0) return true; }",
+                  "        return false;",
+                  "    }",
+                  "    function clean(obj) {",
+                  "        if (Array.isArray(obj)) return obj.map(clean);",
+                  "        if (obj !== null && typeof obj === 'object') {",
+                  "            var out = {};",
+                  "            Object.keys(obj).forEach(function(k) { if (!isStripped(k)) out[k] = clean(obj[k]); });",
+                  "            return out;",
+                  "        }",
+                  "        return obj;",
+                  "    }",
+                  "    pm.request.body.update({ mode: 'raw', raw: JSON.stringify(clean(payload), null, 2) });",
+                  "} catch(e) { console.error('payload parse error:', e.message); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var appName = pm.variables.get('app');",
+                  "pm.test('[Update] PATCH returned 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) console.log('UPDATED APP:', appName);",
+                  "else console.error('FAILED:', pm.response.code, pm.response.text());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": {
+              "raw": "{{baseUrl}}/api/os/mxapiappdesign/{{app}}?lean=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "os", "mxapiappdesign", "{{app}}"],
+              "query": [{ "key": "lean", "value": "1" }]
+            },
+            "description": "PATCH to push updated screen changes to an existing app. Reads from 'payload' collection variable."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Verify",
+      "description": "Confirm app exists on target environment.",
+      "item": [
+        {
+          "name": "Verify: {{app}}",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var base = (pm.variables.get('baseUrl') || '').replace(/\\/+$/, '');",
+                  "var app  = (pm.variables.get('app') || '').trim().toUpperCase();",
+                  "if (!app) { throw new Error('app variable is empty'); }",
+                  "var url = base + '/api/os/mxapiappdesign'",
+                  "    + '?lean=1'",
+                  "    + '&oslc.where=app%3D%22' + app + '%22'",
+                  "    + '&oslc.select=app,description,apptype,maintbname';",
+                  "pm.request.url.update(url);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var appName = (pm.variables.get('app') || '').toUpperCase();",
+                  "pm.test('[Verify] GET returned 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) return;",
+                  "var json = pm.response.json();",
+                  "pm.test('[Verify] App exists: ' + appName, function () {",
+                  "    pm.expect(json.member).to.be.an('array').with.lengthOf.above(0);",
+                  "    pm.expect(json.member[0].app).to.eql(appName);",
+                  "    console.log('VERIFIED:', appName, '| type:', json.member[0].apptype);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/os/mxapiappdesign?lean=1&oslc.where=app=\"{{app}}\"&oslc.select=app,description,apptype",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "os", "mxapiappdesign"],
+              "query": [
+                { "key": "lean",        "value": "1" },
+                { "key": "oslc.where",  "value": "app=\"{{app}}\"" },
+                { "key": "oslc.select", "value": "app,description,apptype" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Rollback",
+      "description": "DELETE app from target. Irreversible — use only to undo a failed Deploy.",
+      "item": [
+        {
+          "name": "Delete: {{app}}",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var appName = pm.variables.get('app');",
+                  "pm.test('[Rollback] DELETE returned 200 or 204', function () { pm.expect(pm.response.code).to.be.oneOf([200, 204]); });",
+                  "if ([200, 204].indexOf(pm.response.code) >= 0) console.log('DELETED APP:', appName);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/os/mxapiappdesign/{{app}}?lean=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "os", "mxapiappdesign", "{{app}}"],
+              "query": [{ "key": "lean", "value": "1" }]
+            },
+            "description": "DELETE the app from the target. Irreversible — use only for rollback after a failed Deploy."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,87 @@
+# TMG Maximo Development (`maxdev`)
+
+Code-managed IBM Maximo / MAS 9 Manage development. Every configuration and
+code artifact lives in Git as one reviewable file. It is pulled from and pushed
+to Maximo **through Maximo's own APIs**, from either a CLI or an MCP server, so
+Claude (or any MCP client) can do the same work you do.
+
+This repo deliberately contains **no CI/CD or pipelines**. It is the development
+layer: extract, edit, diff, deploy to DEV, verify. Promotion beyond DEV is a
+separate release process; mark those environments `MAXIMO_PROTECTED=true` and
+this tool refuses to write to them.
+
+```
+ you / Claude ──► maxdev CLI ─┐
+                              ├─► engine ─► registry.yaml (41 artifact types)
+ Claude Code ───► MCP server ─┘     │
+                                    ├─► Manage JSON API  /maximo/api/os/* , /api/script/*
+                                    └─► IBM Maximo MCP server (MAS 9.2, optional)
+```
+
+## Quick start
+
+```bash
+pip install -r requirements.txt            # requests, PyYAML, mcp
+# fill environments/.env.demo (git-ignored, starts read-only)
+python3 -m maxdev ping --env demo          # who am I
+python3 -m maxdev doctor --env demo        # which object structures exist for every type
+python3 -m maxdev bootstrap --env demo     # dry run; add --apply to install TMG helpers
+```
+
+`pip install -e .` also gives you the `maxdev` and `maxdev-mcp` commands.
+
+## Daily loop
+
+```bash
+maxdev extract domain --like TMG            # pull TMG* domains into src/03-domains/
+maxdev extract autoscript WORKORDER.SAVE    # one script -> src/09-automation-scripts/object/
+maxdev extract appxml WOTRACK               # screen XML -> src/07-app-designer/WOTRACK.xml
+maxdev build field_validate --object WORKORDER --attr CUSTOMER_EMAIL   # TMG template -> src/09-...
+maxdev lint                                 # TMG standards; deploy refuses lint errors
+maxdev java analyze legacy/FldWOEmail.java  # which template a Java class converts to
+# ... edit files ...
+maxdev diff --path src/03-domains           # repo vs live
+maxdev deploy --manifest WO-CUSTOMER-EMAIL  # dry run: shows create/update/merge per file
+maxdev deploy --manifest WO-CUSTOMER-EMAIL --apply
+maxdev dbconfig status                      # objects with unapplied Database Configuration
+```
+
+Deploy rules:
+- Deploy always runs in dependency order (layer 0 foundation → 11 reporting) and stops at the first failure. Maximo config writes are not a transaction, so the receipt in `.maxdev/receipts/` records exactly what landed.
+- Upserts look a record up by its key, then merge into it or create it. A key that matches more than one record is refused rather than guessed.
+- Formulas and conditional UI are deleted and re-created, with a read-back check. If the re-create fails, the old rows are restored automatically.
+- App Designer XML is a whole-screen document, so deploy:
+  - backs up the live screen first;
+  - merges the repo copy on top of the live one, so changes made in the UI survive;
+  - reads the screen back to catch a write the server silently dropped.
+
+## Layout
+
+| Path | What |
+|---|---|
+| `src/NN-*/` | Artifacts, one file per record, a folder per area (see [docs/COVERAGE.md](docs/COVERAGE.md)) |
+| `manifests/*.yaml` | Change sets: one per feature/ticket, including manual steps |
+| `bootstrap/` | TMG helper object structures + `TMG_EXPORT_PRES` script, installed once per environment |
+| `maxdev/` | Engine, CLI, MCP server, IBM MCP client, script builder. `registry.yaml` drives everything |
+| `catalog/` | TMG script templates (28) and samples (69), from TMG_MAX_CODE (MIT) |
+| `docs/standards/` | TMG_AUTOSCRIPT_STANDARDS.md (authoritative) |
+| `docs/autoscript/` | Patterns, naming, error handling, launch points, Java/TRM conversion guides, knowledge base |
+| `postman/collections/` | Generic MAS 9 config + App Designer collections, for manual API exploration |
+| `docs/` | Coverage map, application development, IBM tooling, API notes, standards |
+| `.claude/skills/` | `maximo-dev`, `create-automation-script`, `convert-java-to-script`, `convert-trm-to-script`, `maximo-workflow` |
+| `tests/` | Offline tests against an in-memory fake Manage API (`python3 -m unittest discover -s tests`) |
+
+## MCP
+
+`.mcp.json` registers two servers for Claude Code:
+- **`tmg-maximo-dev`**: this repo's 23 tools, including the script builder, lint and Java analysis. Write tools are dry-run unless `apply=true`.
+- **`ibm-maximo-mcp`**: IBM's MAS 9.2 MCP server. Export `MAXIMO_MCP_URL` and `MAXIMO_API_KEY` before starting `claude`. The same server is also reachable through `maxdev ibm-mcp tools|call` and the `ibm_mcp_*` tools. See [docs/IBM_TOOLING.md](docs/IBM_TOOLING.md).
+
+## Status
+
+The engine, formats and safety rules are tested offline (27 tests). These items still need a live check on a TMG tenant:
+- Object-structure names marked `verify` in `maxdev types`; run `maxdev doctor` to check them.
+- The Admin Mode and Migration Manager service paths.
+- The IBM MCP server route.
+
+The reference repo verified the `ok` names on a MAS 9 tenant.

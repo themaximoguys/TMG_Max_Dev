@@ -1,0 +1,422 @@
+# Artifact registry — the one table that drives extract, deploy, diff, CLI and MCP.
+#
+# Every Maximo development area that is code-managed in this repo has one entry.
+# Order of `layer` is the deploy dependency order (lower first).
+#
+#   id        short type id used on the command line (maxdev deploy domain ...)
+#   os        Manage JSON API object structure (/maximo/api/os/<os>). A list means
+#             "first one that exists on the tenant wins" (custom bootstrap OS, then OOTB).
+#   key       attributes that uniquely identify a record (first = primary)
+#   folder    repo folder (under src/) holding one file per record
+#   name      fields joined with '__' to make the filename (defaults to key)
+#   handler   json | replace | autoscript | appxml | readonly | manual
+#               json       GET by key -> MERGE if found, else POST
+#               replace    delete-by-key then POST (MERGE leaves stale children)
+#               autoscript .py/.js source + scriptConfig header -> MXAPIAUTOSCRIPT
+#               appxml     presentation XML via MXAPIPRESENTATION (whole-CLOB, merge-safe)
+#               readonly   extract + diff only; deploy refused
+#               manual     tracked in Git, applied by hand / other tool (see note)
+#   select    oslc.select for extract (child collections with {..})
+#   post      follow-up step after deploy: apply-dbconfig
+#   status    ok | verify   (verify = name/behaviour not yet proven on a TMG tenant;
+#             `maxdev doctor` checks it live before you trust it)
+#   note      gotchas carried forward from live MAS 9 work
+#
+# Source for most entries: the reference delivery repo's layers.json/deploy-manifest
+# registry, where each 'ok' endpoint returned HTTP 200 against a MAS 9 tenant.
+
+layers:
+  0: Foundation
+  1: Data model
+  2: Application / UI
+  3: Business logic
+  4: Scheduling
+  5: Workflow
+  6: Communication
+  7: Integration
+  8: Classification & reference
+  9: Service management
+  10: Mobile / MAF / inspections
+  11: Reporting & analytics
+
+types:
+  # ── Layer 0 ──────────────────────────────────────────────────────────────
+  - id: property
+    label: System properties
+    layer: 0
+    os: MXAPIPROP
+    key: [propname]
+    folder: 01-system-properties
+    handler: json
+    select: "propname,description,maxtype,domainid,encrypted,globalonly,instanceonly,liverefresh,nullsallowed,onlinechanges,securelevel,userdefined,maxpropvalue{propvalue,servername,serverhost}"
+    note: Encrypted/secure property values are not returned by the API — keep them out of Git and set per environment.
+
+  - id: securitygroup
+    label: Security groups
+    layer: 0
+    os: MXAPIGROUP
+    key: [groupname]
+    folder: 02-security/groups
+    handler: json
+    note: Extract carries application authorisations; review grants before deploying to a shared environment.
+
+  - id: sigoption
+    label: Signature options
+    layer: 0
+    os: [TMGMXAPISIGOPTION, MXAPISIGOPTION]
+    key: [app, optionname]
+    folder: 02-security/sigoptions
+    name: [app, optionname]
+    handler: json
+    note: Must exist before the App Designer XML that references them (Layer 2). OOTB MXAPISIGOPTION is app-scoped; TMGMXAPISIGOPTION (bootstrap) is an INTEGRATION-scoped transport keyed by app+optionname.
+
+  - id: domain
+    label: Domains (ALN/numeric/synonym/table/crossover)
+    layer: 0
+    os: [MHDOMAIN, MXDOMAIN, MXAPIDOMAIN]
+    key: [domainid]
+    folder: 03-domains
+    handler: json
+    note: Prefer MHDOMAIN. MXAPIDOMAIN refuses ADD (BMXAA0024E); MXDOMAIN cannot create CROSSOVER domains (BMXAA4220E). MHDOMAIN created a crossover domain with grandchild rows in one POST on MAS 9.
+
+  - id: message
+    label: Messages (MAXMESSAGES)
+    layer: 0
+    os: [MXAPIMAXMESSAGES, MXAPIMAXMESSAGE]
+    key: [msggroup, msgkey]
+    folder: 03-messages
+    name: [msggroup, msgkey]
+    handler: json
+    status: verify
+    note: Custom error/info messages raised by automation scripts (service.error(group,key)).
+
+  - id: persongroup
+    label: Person groups (workflow / escalation routing)
+    layer: 0
+    os: MXAPIPERGROUP
+    key: [persongroup]
+    folder: 02-security/person-groups
+    handler: json
+    note: Needed before workflows, escalations and comm templates that route to them. Person members are environment data — review before promoting.
+
+  # ── Layer 1 ──────────────────────────────────────────────────────────────
+  - id: object
+    label: Objects & attributes (Database Configuration)
+    layer: 1
+    os: MXOBJECTCFG
+    key: [objectname]
+    folder: 04-objects
+    handler: json
+    post: apply-dbconfig
+    note: Writes MAXOBJECTCFG/MAXATTRIBUTECFG rows only. The schema change needs Apply Configuration Changes (maxdev dbconfig apply, or the DB Config app). Never ship raw DDL.
+
+  - id: relationship
+    label: Relationships
+    layer: 1
+    os: MXAPIRELATIONSHIP
+    key: [parent, name]
+    folder: 05-relationships
+    name: [parent, name]
+    handler: json
+    note: Relationship name is unique per parent object only.
+
+  - id: lookupmap
+    label: Lookup maps (MAXLOOKUPMAP)
+    layer: 1
+    os: [TMGMXLOOKUPMAP, MXAPILOOKUPMAP]
+    key: [target, targetattr, source]
+    folder: 05-lookupmaps
+    name: [target, targetattr]
+    handler: json
+    status: verify
+    note: No OOTB REST structure is guaranteed; create TMGMXLOOKUPMAP from bootstrap/ if doctor reports it missing.
+
+  - id: condition
+    label: Conditional expressions
+    layer: 1
+    os: MXAPICONDITION
+    key: [conditionnum]
+    folder: 06-conditions
+    handler: json
+
+  # ── Layer 2 ──────────────────────────────────────────────────────────────
+  - id: appxml
+    label: Application Designer presentations (incl. LIBRARY, LOOKUPS)
+    layer: 2
+    os: MXAPIPRESENTATION
+    key: [app]
+    folder: 07-app-designer
+    handler: appxml
+    note: PRESENTATION is one CLOB per app — a write replaces the whole screen. Deploy always backs up the live XML, merges additively and refuses if live elements would be lost (use --force-replace to override). Extract falls back to the TMG_EXPORT_PRES script if the OS returns no presentation.
+
+  - id: appdesc
+    label: Application descriptions (MAXAPPS)
+    layer: 2
+    os: [MXAPIMAXAPPS, MXAPIAPPLICATION]
+    key: [app]
+    folder: 07-app-designer/_apps
+    handler: json
+    status: verify
+
+  - id: datarestriction
+    label: Data restrictions (security)
+    layer: 2
+    os: MXAPIDATARESTRICTION
+    key: [srestrictnum]
+    folder: 02-security/data-restrictions
+    handler: json
+    note: srestrictnum is a generated id and differs per environment — match by content when promoting (doctor/diff flags drift).
+
+  - id: grant
+    label: Sig-option grants (APPLICATIONAUTH)
+    layer: 2
+    os: MXAPIGROUP
+    key: [groupname]
+    folder: 02-security/grants
+    handler: json
+    note: Grants live under the group's applicationauth children; deploy merges, never removes.
+
+  - id: formula
+    label: Attribute formulas
+    layer: 2
+    os: MXAPIATTRFORMULA
+    key: [objectname, attributename]
+    folder: 08-formulas
+    name: [objectname, attributename]
+    handler: replace
+    note: MERGE does not update a formula row; the replace handler deletes then POSTs with rollback.
+
+  - id: condprop
+    label: Conditional UI (CTRLGROUP/CTRLCONDITION/CTRLCONDPROP)
+    layer: 2
+    os: [TMGMXAPICONDPROP, MXAPICONDPROP]
+    key: [app, optionname, groupname]
+    folder: 07-app-designer/_conditional-ui
+    name: [app, optionname, groupname]
+    handler: replace
+    note: Three-level tree — a parent MERGE leaves stale child rows, so it is replaced whole. Needs TMGMXAPICONDPROP from bootstrap/.
+
+  - id: query
+    label: Saved queries (QUERY)
+    layer: 2
+    os: [MXAPIQUERY, MXQUERY]
+    key: [app, clausename, owner]
+    folder: 07-app-designer/_queries
+    name: [app, clausename]
+    handler: json
+    status: verify
+
+  - id: startcenter
+    label: Start center templates
+    layer: 2
+    os: [MXAPISCTEMPLATE]
+    key: [sctemplateid]
+    folder: 07-app-designer/_startcenters
+    handler: json
+    status: verify
+
+  # ── Layer 3 ──────────────────────────────────────────────────────────────
+  - id: autoscript
+    label: Automation scripts (+ launch points, variables)
+    layer: 3
+    os: [MXAPIAUTOSCRIPT, MXSCRIPT]
+    key: [autoscript]
+    folder: 09-automation-scripts
+    handler: autoscript
+    select: "autoscript,description,scriptlanguage,loglevel,active,interface,status,version,category,source,autoscriptvars{*},scriptlaunchpoint{*,launchpointvars{*}}"
+    note: Stored as real .py/.js source with the TMG scriptConfig dict (docs/standards/TMG_AUTOSCRIPT_STANDARDS.md). Folder by launch point type. Built from catalog/templates via `maxdev build`; lint gates deploy.
+
+  - id: action
+    label: Actions & action groups
+    layer: 3
+    os: MXAPIACTION
+    key: [action]
+    folder: 10-actions
+    handler: json
+    note: Deploy single actions before groups (groups reference members) — the deployer sorts by type.
+
+  - id: escalation
+    label: Escalations
+    layer: 3
+    os: MXAPIESCALATION
+    key: [escalation]
+    folder: 11-escalations
+    handler: json
+    note: Deploy inactive, then activate (escalation activation validates the SQL).
+
+  # ── Layer 4 ──────────────────────────────────────────────────────────────
+  - id: crontask
+    label: Cron task definitions & instances
+    layer: 4
+    os: MXAPICRONTASKDEF
+    key: [crontaskname]
+    folder: 12-cron-tasks
+    handler: json
+    note: MXAPICRONTASK (no DEF) does not exist on MAS 9 tenants tested. Instance schedules/params ride as children.
+
+  # ── Layer 5 ──────────────────────────────────────────────────────────────
+  - id: workflow
+    label: Workflow processes
+    layer: 5
+    os: MXAPIWFPROCESS
+    key: [processname, processrev]
+    folder: 13-workflows
+    name: [processname, processrev]
+    handler: json
+    note: MAS keeps every revision; deploy creates a new revision, then enable/activate (see MaximoWorkflow skill for generating these).
+
+  # ── Layer 6 ──────────────────────────────────────────────────────────────
+  - id: commtemplate
+    label: Communication templates
+    layer: 6
+    os: [MXAPICOMMTEMPLATE, MXAPICTEMPLATE]
+    key: [templateid]
+    folder: 14-comm-templates
+    handler: json
+    status: verify
+    note: Was blocked on the reference tenant (OS missing). Doctor checks both names.
+
+  # ── Layer 7 ──────────────────────────────────────────────────────────────
+  - id: objectstructure
+    label: Integration object structures
+    layer: 7
+    os: [MXINTOBJECT, MXAPIINTOBJECT]
+    key: [intobjectname]
+    folder: 15-integration/object-structures
+    handler: json
+  - id: publishchannel
+    label: Publish channels
+    layer: 7
+    os: MXAPIIFACEOUT
+    key: [ifacename]
+    folder: 15-integration/publish-channels
+    handler: json
+  - id: enterpriseservice
+    label: Enterprise services
+    layer: 7
+    os: MXAPIIFACEIN
+    key: [ifacename]
+    folder: 15-integration/enterprise-services
+    handler: json
+  - id: invocationchannel
+    label: Invocation channels
+    layer: 7
+    os: MXAPIIFACEINVOKE
+    key: [ifacename]
+    folder: 15-integration/invocation-channels
+    handler: json
+  - id: endpoint
+    label: End points
+    layer: 7
+    os: MXAPIENDPOINT
+    key: [endpointname]
+    folder: 15-integration/end-points
+    handler: json
+    note: Endpoint passwords/keys are not exported; inject per environment.
+  - id: extsystem
+    label: External systems
+    layer: 7
+    os: [MXEXTSYSTEM, MXAPIEXTSYS]
+    key: [extsysname]
+    folder: 15-integration/external-systems
+    handler: json
+  - id: ifacecontrol
+    label: Integration controls
+    layer: 7
+    os: MXAPIIFACECONTROL
+    key: [ifacecontrol]
+    folder: 15-integration/integration-controls
+    handler: json
+  - id: jsonmapping
+    label: JSON mappings
+    layer: 7
+    os: [MXAPIJSONMAPPING]
+    key: [mapname]
+    folder: 15-integration/json-mappings
+    handler: json
+    status: verify
+
+  # ── Layer 8 ──────────────────────────────────────────────────────────────
+  - id: classification
+    label: Classifications & attributes
+    layer: 8
+    os: MXAPICLASSSTRUCTURE
+    key: [classstructureid]
+    folder: 16-classifications
+    handler: json
+    note: classstructureid is generated per environment; promote by classificationid+hierarchy.
+
+  # ── Layer 9 ──────────────────────────────────────────────────────────────
+  - id: sla
+    label: SLAs
+    layer: 9
+    os: [TMGMXAPISLA, MXAPISLA]
+    key: [slanum]
+    folder: 17-service-mgmt/sla
+    handler: json
+    status: verify
+    note: No OOTB REST structure on the reference tenant. Create TMGMXAPISLA from bootstrap/ if needed.
+  - id: responseplan
+    label: Response plans
+    layer: 9
+    os: [TMGMXAPIRESPPLAN]
+    key: [resppartyid]
+    folder: 17-service-mgmt/response-plans
+    handler: json
+    status: verify
+
+  # ── Layer 10 ─────────────────────────────────────────────────────────────
+  - id: inspectionform
+    label: Inspection forms
+    layer: 10
+    os: [MXAPIINSPFORM, INSPECTIONS]
+    key: [inspformnum, revision]
+    folder: 18-mobile/inspection-forms
+    name: [inspformnum, revision]
+    handler: json
+    status: verify
+    note: Needs the API user's group authorised for the inspections structure (BMXAA9301E otherwise).
+  - id: mafapp
+    label: MAF / Maximo Mobile & role-based app customisations
+    layer: 10
+    os: []
+    key: [appname]
+    folder: 18-mobile/maf-apps
+    handler: manual
+    note: Source projects (app.xml, AppCustomizations.js) built with the Maximo dev CLI and uploaded through the MAF Configuration app. See docs/APPLICATION_DEVELOPMENT.md.
+
+  # ── Layer 11 ─────────────────────────────────────────────────────────────
+  - id: report
+    label: BIRT report registrations
+    layer: 11
+    os: REP_REPORTING
+    key: [appname, reportname]
+    folder: 19-reports
+    name: [appname, reportname]
+    handler: json
+    note: Registration rows only. The .rptdesign files live next to them and are imported via the Report Administration app / report import utility.
+  - id: kpi
+    label: KPI definitions
+    layer: 11
+    os: MXAPIKPIMAIN
+    key: [kpiname]
+    folder: 19-kpi
+    handler: json
+
+  # ── Not REST-deployable by design ────────────────────────────────────────
+  - id: java
+    label: Java customisations (customization archive)
+    layer: 99
+    os: []
+    key: [name]
+    folder: 90-java
+    handler: manual
+    note: MAS 9 Manage bakes Java classes into the image via the customization archive URL on the ManageWorkspace CR. Prefer automation scripts. See docs/APPLICATION_DEVELOPMENT.md.
+  - id: dataload
+    label: Seed / reference data loads
+    layer: 99
+    os: []
+    key: [name]
+    folder: 91-data
+    handler: manual
+    note: CSV/JSON loads go through `maxdev data load` (bulk REST into any object structure) — not part of config deploy order.

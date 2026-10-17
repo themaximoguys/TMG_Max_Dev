@@ -1,0 +1,15 @@
+# secrets
+environments/.env.*
+!environments/.env.example
+*.pem
+*.key
+# tool state: backups of live screens, deploy receipts
+.maxdev/
+# python
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+# editors / os
+.DS_Store
+.idea/

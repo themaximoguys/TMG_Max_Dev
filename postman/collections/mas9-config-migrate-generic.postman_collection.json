@@ -1,0 +1,657 @@
+{
+  "info": {
+    "name": "MAS 9 — Config Migrate (Generic)",
+    "description": "Generic Extract → Git → Deploy collection for ALL MAS 9 configuration types.\n\nOne collection, any config type — swap the environment file to change what you're working with.\n\n──────────────────────────────────────────────────────────────\nSPRINT MIGRATION WORKFLOW\n──────────────────────────────────────────────────────────────\n\n  STEP 1 — EXTRACT (from source instance)\n    newman run mas9-config-migrate-generic.json \\\n      --environment environments/dev.CUST.WO.WORKTYPE.autoscript.json \\\n      --folder \"1. Extract\"\n\n    → Prints clean JSON to console. Copy and save to Git:\n        git/configs/autoscripts/CUST.WO.WORKTYPE.json\n\n  STEP 2 — GIT (developer checks in manually; you automate)\n    git add configs/autoscripts/CUST.WO.WORKTYPE.json\n    git commit -m \"feat: CUST.WO.WORKTYPE - update WO description on worktype change\"\n\n  STEP 3 — DEPLOY (to target instance)\n    newman run mas9-config-migrate-generic.json \\\n      --environment environments/demo.CUST.WO.WORKTYPE.autoscript.json \\\n      --env-var \"payload=$(cat git/configs/autoscripts/CUST.WO.WORKTYPE.json)\" \\\n      --folder \"2. Deploy\"\n\n  STEP 4 — VERIFY\n    newman run mas9-config-migrate-generic.json \\\n      --environment environments/demo.CUST.WO.WORKTYPE.autoscript.json \\\n      --folder \"3. Verify\"\n\n──────────────────────────────────────────────────────────────\nSUPPORTED CONFIG TYPES (set via environment file)\n──────────────────────────────────────────────────────────────\n  Type                  endpoint                id_field\n  ──────────────────    ──────────────────────  ──────────────\n  Automation Script     mxapiautoscript         autoscript\n  Domain                mxapidomain             domainid\n  Conditional Expr      mxapicondition          conditionnum\n  Data Restriction      mxapidatarestriction    srestrictnum\n  Comm Template         mxapicommtmplt          commtmpltid\n  Workflow              mxapiwfprocess          processname\n  Cron Task             mxapicrontask           crontaskname\n  Security Group        mxapisecgroup           groupname\n  Application Designer  mxapiapp                app\n\nSee environments/templates/ for ready-made environment files per type.\n\n──────────────────────────────────────────────────────────────\nENVIRONMENT VARIABLES\n──────────────────────────────────────────────────────────────\n  baseUrl        MAS base URL with /maximo  e.g. https://host.com/maximo\n  apikey         MAS API key\n  endpoint       Object structure name      e.g. mxapiautoscript\n  id_field       Primary key field          e.g. autoscript\n  id_value       The config's ID value      e.g. CUST.WO.WORKTYPE\n  select_fields  oslc.select string         e.g. *,scriptlaunchpoint{*}\n  payload        Extracted JSON (for Deploy — paste file content or set via --env-var)\n  applyScript    Automation script that runs Apply Config  e.g. TMG.CONFIGDB.APPLY  (folder 6 only)\n  applyEndpoint  Apply URL/path override if not using /api/script  (optional)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      { "key": "key",   "value": "apikey",     "type": "string" },
+      { "key": "value", "value": "{{apikey}}", "type": "string" },
+      { "key": "in",    "value": "header",     "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl",       "value": "" },
+    { "key": "apikey",        "value": "" },
+    { "key": "endpoint",      "value": "" },
+    { "key": "id_field",      "value": "" },
+    { "key": "id_value",      "value": "" },
+    { "key": "select_fields", "value": "*" },
+    { "key": "payload",       "value": "{}" },
+    { "key": "applyScript",   "value": "" },
+    { "key": "applyEndpoint", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Extract",
+      "description": "GET from the source instance. Strips all non-portable fields (href, _rowstamp, localref, *_collectionref) and outputs clean JSON ready for Git check-in.\n\nAfter running: copy the JSON from the console log and save as a file in your Git repo.\nThe cleaned payload is also saved to the 'payload' collection variable so you can immediately run Deploy without copy-pasting.",
+      "item": [
+        {
+          "name": "Extract: {{id_value}}",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var baseUrl      = (pm.variables.get('baseUrl') || '').replace(/\\/+$/, '');",
+                  "var endpoint     = pm.variables.get('endpoint');",
+                  "var idField      = pm.variables.get('id_field');",
+                  "var idValue      = (pm.variables.get('id_value') || '').trim();",
+                  "var idField2     = pm.variables.get('id_field2');",
+                  "var idValue2     = (pm.variables.get('id_value2') || '').trim();",
+                  "var selectFields = pm.variables.get('select_fields') || '*';",
+                  "",
+                  "if (!idValue) {",
+                  "    throw new Error('id_value is empty — set it in the environment file (e.g. AG.GETMEASURES)');",
+                  "}",
+                  "",
+                  "// Composite-key resources (MAXRELATIONSHIP, ATTRFORMULA, ACTIONGROUP) need a second",
+                  "// predicate: the name alone is not unique, and members[0] would be the wrong parent's row.",
+                  "var where = idField + '%3D%22' + encodeURIComponent(idValue) + '%22';",
+                  "if (idField2 && idValue2) {",
+                  "    where += '%20and%20' + idField2 + '%3D%22' + encodeURIComponent(idValue2) + '%22';",
+                  "}",
+                  "",
+                  "// Build URL manually so Postman does not URL-encode the oslc.select braces",
+                  "// and the oslc.where = / \" operators reach MAS correctly.",
+                  "var url = baseUrl + '/api/os/' + endpoint",
+                  "    + '?lean=1'",
+                  "    + '&oslc.where=' + where",
+                  "    + '&oslc.select=' + selectFields;",
+                  "",
+                  "pm.request.url.update(url);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var endpoint = pm.variables.get('endpoint');",
+                  "var idField  = pm.variables.get('id_field');",
+                  "var idValue  = pm.variables.get('id_value');",
+                  "",
+                  "pm.test('[Extract] GET returned 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { return; }",
+                  "",
+                  "// ── Strip non-portable / non-deployable fields ───────────────────",
+                  "var SKIP_EXACT  = ['href','_rowstamp','localref','_id','responseInfo'];",
+                  "var SKIP_SUFFIX = ['_collectionref','_description'];",
+                  "function isStripped(k) {",
+                  "    if (SKIP_EXACT.indexOf(k) >= 0) return true;",
+                  "    for (var i = 0; i < SKIP_SUFFIX.length; i++) { if (k.indexOf(SKIP_SUFFIX[i]) >= 0) return true; }",
+                  "    return false;",
+                  "}",
+                  "function clean(o) {",
+                  "    if (Array.isArray(o)) return o.map(clean);",
+                  "    if (o !== null && typeof o === 'object') {",
+                  "        var r = {}; Object.keys(o).forEach(function(k){ if(!isStripped(k)) r[k]=clean(o[k]); }); return r;",
+                  "    }",
+                  "    return o;",
+                  "}",
+                  "",
+                  "// ── Parse ────────────────────────────────────────────────────────",
+                  "var body    = pm.response.json();",
+                  "var members = body.member || (body[idField] ? [body] : []);",
+                  "pm.test('[Extract] Record found: ' + idValue, function () { pm.expect(members.length).to.be.above(0); });",
+                  "if (members.length === 0) { console.warn('No record: ' + idField + '=' + idValue); return; }",
+                  "",
+                  "var rec = clean(members[0]);",
+                  "pm.collectionVariables.set('payload', JSON.stringify(rec));",
+                  "",
+                  "// ── Helpers ───────────────────────────────────────────────────────",
+                  "var py = false;",
+                  "function evtLabel(lp) {",
+                  "    var e = [];",
+                  "    var onAdd = !!lp.add, onUpd = !!lp.update;",
+                  "    if (onAdd || onUpd) {",
+                  "        var when = (String(lp.evcontext || '0') === '1') ? 'before' : 'after';",
+                  "        if (onAdd && onUpd) e.push('SAVE(' + when + ')');",
+                  "        else if (onAdd)     e.push('ADD(' + when + ')');",
+                  "        else                e.push('UPDATE(' + when + ')');",
+                  "    }",
+                  "    if (lp.delete)           e.push('DELETE');",
+                  "    if (lp.objectevent && (parseInt(lp.objectevent, 10) & 1)) e.push('INIT');",
+                  "    if (lp.attributeevent) {",
+                  "        var ae = parseInt(lp.attributeevent, 10);",
+                  "        if (ae & 1) e.push('INIT VALUE');",
+                  "        if (ae & 2) e.push('VALIDATE');",
+                  "        if (ae & 4) e.push('ACTION');",
+                  "        if (ae & 8) e.push('LIST FILTER');",
+                  "    }",
+                  "    if (lp.exitsymbol) e.push('EXIT:' + lp.exitsymbol);",
+                  "    return e.join(' + ') || '(none)';",
+                  "}",
+                  "function bval(v) { return py ? (v ? 'True' : 'False') : (v ? 'true' : 'false'); }",
+                  "function sval(v, d) {",
+                  "    d = d || 0;",
+                  "    var p = '    '.repeat(d), p1 = '    '.repeat(d+1);",
+                  "    if (v === null || v === undefined) return py ? 'None' : 'null';",
+                  "    if (typeof v === 'boolean') return bval(v);",
+                  "    if (typeof v === 'number')  return String(v);",
+                  "    if (typeof v === 'string')  return '\"' + v.replace(/\\\\/g,'\\\\\\\\').replace(/\"/g,'\\\\\"').replace(/\\r?\\n/g,'\\\\n') + '\"';",
+                  "    if (Array.isArray(v)) {",
+                  "        if (!v.length) return '[]';",
+                  "        return '[\\n' + v.map(function(x){ return p1 + sval(x,d+1); }).join(',\\n') + '\\n' + p + ']';",
+                  "    }",
+                  "    var keys = Object.keys(v);",
+                  "    if (!keys.length) return '{}';",
+                  "    return '{\\n' + keys.map(function(k){ return p1+'\"'+k+'\": '+sval(v[k],d+1); }).join(',\\n') + '\\n' + p + '}';",
+                  "}",
+                  "function buildEvts(lp) {",
+                  "    var e = {};",
+                  "    // OBJECT LP — MAS returns add/update/delete booleans + evcontext (0=after,1=before)",
+                  "    var onAdd = !!lp.add, onUpd = !!lp.update;",
+                  "    var hasObjEvts = (lp.add !== undefined || lp.update !== undefined || lp.delete !== undefined);",
+                  "    if (onAdd || onUpd) {",
+                  "        if (onAdd && onUpd) e.save = true;",
+                  "        if (String(lp.evcontext || '0') === '1') e.beforesave = true;",
+                  "        else                                      e.aftersave  = true;",
+                  "    }",
+                  "    if (hasObjEvts) { if (onAdd) e.add = true; if (onUpd) e.update = true; if (lp.delete) e['delete'] = true; }",
+                  "    if (lp.objectevent && (parseInt(lp.objectevent, 10) & 1)) e.init = true;",
+                  "    // ATTRIBUTE LP events — attributeevent bitmask: 1=initvalue, 2=validate, 4=action, 8=listfilter",
+                  "    if (lp.attributeevent) {",
+                  "        var ae = parseInt(lp.attributeevent, 10);",
+                  "        if (ae & 1) e.initvalue  = true;",
+                  "        if (ae & 2) e.validate   = true;",
+                  "        if (ae & 4) e.action     = true;",
+                  "        if (ae & 8) e.listfilter = true;",
+                  "    }",
+                  "    return e;",
+                  "}",
+                  "",
+                  "var out, filename;",
+                  "",
+                  "if (endpoint === 'mxapiautoscript') {",
+                  "    // ── Automation Script: git-exports format ─────────────────────",
+                  "    var lang = (rec.scriptlanguage || 'python').toLowerCase();",
+                  "    py = (lang === 'python' || lang === 'jython');",
+                  "    var cc  = py ? '#' : '//';",
+                  "    var sep = cc + ' ' + '='.repeat(77);",
+                  "    var ext = py ? 'py' : 'js';",
+                  "    var lps = rec.scriptlaunchpoint || [];",
+                  "    var lp0 = lps[0] || null;",
+                  "",
+                  "    var L = [];",
+                  "    L.push(sep); L.push(cc + ' Script Information'); L.push(sep);",
+                  "    L.push(cc + ' Script Name:       ' + rec.autoscript);",
+                  "    if (lp0) {",
+                  "        L.push(cc + ' Launch Point Name: ' + lp0.launchpointname);",
+                  "        L.push(cc + ' Launch Point Type: ' + (lp0.launchpointtype || ''));",
+                  "        if (lp0.objectname)    L.push(cc + ' Object:            ' + lp0.objectname);",
+                  "        if (lp0.attributename) L.push(cc + ' Attribute:         ' + lp0.attributename);",
+                  "        if (lp0.crontaskname)  L.push(cc + ' Cron Task:         ' + lp0.crontaskname);",
+                  "        L.push(cc + ' Event:             ' + evtLabel(lp0));",
+                  "        L.push(cc + ' Active:            ' + bval(lp0.active));",
+                  "    }",
+                  "    L.push(cc + ' Description:       ' + (rec.description || ''));",
+                  "    L.push(sep);",
+                  "    L.push('');",
+                  "",
+                  "    // Strip developer-embedded scriptConfig block (we emit authoritative one below)",
+                  "    var src = (rec.source || '').replace(/\\r\\n/g,'\\n').replace(/\\r/g,'\\n');",
+                  "    var cfgIdx = src.lastIndexOf('\\nvar scriptConfig');",
+                  "    if (cfgIdx < 0 && py) cfgIdx = src.lastIndexOf('\\nscriptConfig =');",
+                  "    if (cfgIdx >= 0) {",
+                  "        src = src.substring(0, cfgIdx);",
+                  "        src = src.replace(/\\n+[^\\n]*={5,}[^\\n]*$/, '');",
+                  "        src = src.replace(/\\n+$/, '');",
+                  "    }",
+                  "    L.push(src);",
+                  "    L.push('');",
+                  "",
+                  "    L.push(sep); L.push(cc + ' Script Configuration'); L.push(sep);",
+                  "    var cfg = {",
+                  "        autoscript:  rec.autoscript,",
+                  "        description: rec.description || '',",
+                  "        active:      rec.active !== undefined ? rec.active : true,",
+                  "        logLevel:    rec.loglevel || 'ERROR',",
+                  "        scriptLaunchPoints: lps.map(function(lp) {",
+                  "            var e = {",
+                  "                launchPointName: lp.launchpointname,",
+                  "                launchPointType: lp.launchpointtype || '',",
+                  "                active:          lp.active !== undefined ? lp.active : true,",
+                  "                description:     lp.description || ''",
+                  "            };",
+                  "            if (lp.objectname)      e.objectName      = lp.objectname;",
+                  "            if (lp.attributename)   e.attributeName   = lp.attributename;",
+                  "            if (lp.crontaskname)    e.cronTaskName    = lp.crontaskname;",
+                  "            if (lp.objectstructure) e.objectStructure = lp.objectstructure;",
+                  "            if (lp.exitsymbol)      e.exitType        = lp.exitsymbol;",
+                  "            var evts = buildEvts(lp); if (Object.keys(evts).length) e.events = evts;",
+                  "            return e;",
+                  "        })",
+                  "    };",
+                  "    L.push((py ? 'scriptConfig' : 'var scriptConfig') + ' = ' + sval(cfg, 0));",
+                  "",
+                  "    out      = L.join('\\n');",
+                  "    filename = rec.autoscript + '.' + ext;",
+                  "",
+                  "} else {",
+                  "    // ── Generic: pretty JSON (domains, conditions, data restrictions, etc.) ────",
+                  "    var idVal = rec[idField] || idValue || 'record';",
+                  "    // doc 07 s7: a numeric/surrogate key is qualified as <key>__<human-slug>.",
+                  "    // The part before '__' must stay the exact, re-extractable key.",
+                  "    var slug  = (pm.variables.get('file_slug') || '').trim();",
+                  "    filename  = idVal + (slug ? '__' + slug : '') + '.json';",
+                  "    out       = JSON.stringify(rec, null, 2);",
+                  "}",
+                  "",
+                  "console.log('');",
+                  "console.log('EXTRACTED: ' + filename + ' | Save to git-exports/');",
+                  "console.log('');",
+                  "console.log(out);",
+                  "",
+                  "function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }",
+                  "var html = '<html><body style=\"margin:0;padding:16px;background:#1e1e1e;font-family:monospace;\">' +",
+                  "    '<div style=\"font-size:12px;color:#9cdcfe;margin-bottom:8px;\">&#9654; Extracted: ' +",
+                  "    esc(filename) + ' from ' + esc(endpoint) + ' | Copy below to Git</div>' +",
+                  "    '<pre style=\"font-size:13px;color:#d4d4d4;white-space:pre-wrap;word-break:break-all;margin:0;\">' +",
+                  "    esc(out) + '</pre></body></html>';",
+                  "pm.visualizer.set(html);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/os/{{endpoint}}?lean=1&oslc.where={{id_field}}=\"{{id_value}}\"&oslc.select={{select_fields}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "os", "{{endpoint}}"],
+              "query": [
+                { "key": "lean",          "value": "1" },
+                { "key": "oslc.where",    "value": "{{id_field}}=\"{{id_value}}\"" },
+                { "key": "oslc.select",   "value": "{{select_fields}}" }
+              ]
+            },
+            "description": "GET from source. Strips href/_rowstamp/localref/*_collectionref and outputs clean JSON.\nClean JSON is saved to the 'payload' collection variable and printed to console for Git check-in."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Deploy",
+      "description": "POST to the target instance using the extracted payload.\n\nSet the 'payload' variable to the JSON content of your Git file:\n  --env-var \"payload=$(cat your-config.json)\"\n\nThe pre-request script auto-strips any residual non-portable fields (href, _rowstamp, etc.) before sending.",
+      "item": [
+        {
+          "name": "Deploy: {{id_value}}",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// ── Load and clean payload ────────────────────────────────",
+                  "var raw = pm.variables.get('payload') || '{}';",
+                  "",
+                  "try {",
+                  "    var payload = JSON.parse(raw);",
+                  "",
+                  "    // Unwrap member array if user pasted full list response",
+                  "    if (payload.member && Array.isArray(payload.member)) {",
+                  "        payload = payload.member[0] || {};",
+                  "    }",
+                  "",
+                  "    // Server-assigned surrogates in the MAXDOMAIN chain are stripped too:",
+                  "    // an extracted value collides with a DIFFERENT row on the target tenant",
+                  "    // (AMCREW2ROUTES shipped crossoverdomainid 1311, live on EVAL under",
+                  "    // TKT2ACTTRACK). The real key, 'domainid', is deliberately NOT listed.",
+                  "    var STRIP_KEYS   = ['href', '_rowstamp', 'localref', '_id', 'responseInfo',",
+                  "                        'maxdomainid', 'maxtabledomainid', 'crossoverdomainid',",
+                  "                        'alndomainid', 'numericdomainid', 'synonymdomainid',",
+                  "                        'maxdomvalcondid', 'numrangedomainid'];",
+                  "    var STRIP_SUFFIX = ['_collectionref', '_description'];",
+                  "",
+                  "    function isStripped(key) {",
+                  "        if (STRIP_KEYS.indexOf(key) >= 0) return true;",
+                  "        for (var i = 0; i < STRIP_SUFFIX.length; i++) {",
+                  "            if (key.indexOf(STRIP_SUFFIX[i]) >= 0) return true;",
+                  "        }",
+                  "        return false;",
+                  "    }",
+                  "",
+                  "    function clean(obj) {",
+                  "        if (Array.isArray(obj)) { return obj.map(clean); }",
+                  "        if (obj !== null && typeof obj === 'object') {",
+                  "            var out = {};",
+                  "            Object.keys(obj).forEach(function(k) {",
+                  "                if (!isStripped(k)) out[k] = clean(obj[k]);",
+                  "            });",
+                  "            return out;",
+                  "        }",
+                  "        return obj;",
+                  "    }",
+                  "",
+                  "    var cleanPayload = clean(payload);",
+                  "",
+                  "    // Autoscript: translate objectevent bitmask → initaction (MAS only accepts initaction in POST)",
+                  "    if (cleanPayload.scriptlaunchpoint) {",
+                  "        cleanPayload.scriptlaunchpoint = cleanPayload.scriptlaunchpoint.map(function(lp) {",
+                  "            var oe = parseInt(lp.objectevent || '0', 10);",
+                  "            if (oe & 1) lp.initaction = true;",
+                  "            delete lp.objectevent;",
+                  "            return lp;",
+                  "        });",
+                  "    }",
+                  "",
+                  "    pm.request.body.update({ mode: 'raw', raw: JSON.stringify(cleanPayload, null, 2) });",
+                  "",
+                  "} catch(e) {",
+                  "    console.error('payload is not valid JSON:', e.message);",
+                  "    console.error('Set the payload variable to the extracted JSON string.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var idValue   = pm.variables.get('id_value');",
+                  "var endpoint  = pm.variables.get('endpoint');",
+                  "",
+                  "pm.test('[Deploy] POST returned 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    console.log('DEPLOYED: ' + idValue + ' → ' + endpoint);",
+                  "} else {",
+                  "    console.error('DEPLOY FAILED: HTTP ' + pm.response.code);",
+                  "    try { console.error(pm.response.text()); } catch(e) {}",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/os/{{endpoint}}?lean=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "os", "{{endpoint}}"],
+              "query": [{ "key": "lean", "value": "1" }]
+            },
+            "description": "POST to target. Reads the 'payload' variable, strips non-portable fields, and creates the config.\n\nPass payload via Newman: --env-var \"payload=$(cat your-config.json)\"\nOr paste the JSON into the payload collection/environment variable."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Verify",
+      "description": "GET from the target instance to confirm the config was deployed correctly.",
+      "item": [
+        {
+          "name": "Verify: {{id_value}}",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var idField  = pm.variables.get('id_field');",
+                  "var idValue  = pm.variables.get('id_value');",
+                  "var endpoint = pm.variables.get('endpoint');",
+                  "",
+                  "pm.test('[Verify] GET returned 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code !== 200) { return; }",
+                  "",
+                  "pm.test('[Verify] Record exists on target: ' + idValue, function () {",
+                  "    var json = pm.response.json();",
+                  "    var members = json.member || [];",
+                  "    pm.expect(members.length, 'member count').to.be.above(0);",
+                  "    var record = members[0];",
+                  "    pm.expect(record[idField], idField + ' value').to.eql(idValue);",
+                  "    console.log('VERIFIED: ' + idValue + ' on ' + endpoint);",
+                  "    console.log('  active :', record.active);",
+                  "    console.log('  desc   :', record.description || record.desc || '-');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/os/{{endpoint}}?lean=1&oslc.where={{id_field}}=\"{{id_value}}\"&oslc.select={{id_field}},description,active",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "os", "{{endpoint}}"],
+              "query": [
+                { "key": "lean",        "value": "1" },
+                { "key": "oslc.where",  "value": "{{id_field}}=\"{{id_value}}\"" },
+                { "key": "oslc.select", "value": "{{id_field}},description,active" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Update",
+      "description": "MERGE-patch an existing config on the target.\nUse after a developer makes a change and re-extracts — no redeploy needed.",
+      "item": [
+        {
+          "name": "Update: {{id_value}}",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Liberty on this tenant answers a literal PATCH with 501, so the verb is",
+                  "// POST plus x-method-override. Maximo also addresses a record by a resource",
+                  "// id that is base64url of the key value, not the key itself (ASSET ->",
+                  "// _QVNTRVQ-, ITEM -> _SVRFTQ--; '=' padding is emitted as '-'). id_path lets",
+                  "// a caller pass an id taken straight from a record's href instead.",
+                  "var idPath = (pm.variables.get('id_path') || '').trim();",
+                  "if (!idPath) {",
+                  "    var k = (pm.variables.get('id_value') || '').trim();",
+                  "    var b64 = (typeof btoa === 'function') ? btoa(k)",
+                  "            : require('buffer').Buffer.from(k, 'utf8').toString('base64');",
+                  "    idPath = '_' + b64.replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=/g, '-');",
+                  "}",
+                  "pm.variables.set('_resource_id', idPath);",
+                  "",
+                  "// Same strip logic as Deploy",
+                  "var raw = pm.variables.get('payload') || '{}';",
+                  "try {",
+                  "    var payload = JSON.parse(raw);",
+                  "    if (payload.member && Array.isArray(payload.member)) payload = payload.member[0] || {};",
+                  "",
+                  "    // Server-assigned surrogates in the MAXDOMAIN chain are stripped too:",
+                  "    // an extracted value collides with a DIFFERENT row on the target tenant",
+                  "    // (AMCREW2ROUTES shipped crossoverdomainid 1311, live on EVAL under",
+                  "    // TKT2ACTTRACK). The real key, 'domainid', is deliberately NOT listed.",
+                  "    var STRIP_KEYS   = ['href', '_rowstamp', 'localref', '_id', 'responseInfo',",
+                  "                        'maxdomainid', 'maxtabledomainid', 'crossoverdomainid',",
+                  "                        'alndomainid', 'numericdomainid', 'synonymdomainid',",
+                  "                        'maxdomvalcondid', 'numrangedomainid'];",
+                  "    var STRIP_SUFFIX = ['_collectionref', '_description'];",
+                  "",
+                  "    function isStripped(k) {",
+                  "        if (STRIP_KEYS.indexOf(k) >= 0) return true;",
+                  "        for (var i = 0; i < STRIP_SUFFIX.length; i++) { if (k.indexOf(STRIP_SUFFIX[i]) >= 0) return true; }",
+                  "        return false;",
+                  "    }",
+                  "    function clean(obj) {",
+                  "        if (Array.isArray(obj)) return obj.map(clean);",
+                  "        if (obj !== null && typeof obj === 'object') {",
+                  "            var out = {};",
+                  "            Object.keys(obj).forEach(function(k) { if (!isStripped(k)) out[k] = clean(obj[k]); });",
+                  "            return out;",
+                  "        }",
+                  "        return obj;",
+                  "    }",
+                  "    pm.request.body.update({ mode: 'raw', raw: JSON.stringify(clean(payload), null, 2) });",
+                  "} catch(e) { console.error('payload parse error:', e.message); }"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var idValue = pm.variables.get('id_value');",
+                  "pm.test('[Update] MERGE returned 200 or 204', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});",
+                  "if (pm.response.code === 501) console.error('501 -- literal verb reached Liberty; x-method-override missing.');",
+                  "if ([200, 204].indexOf(pm.response.code) >= 0) console.log('MERGED:', idValue);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-method-override", "value": "PATCH" },
+              { "key": "patchtype", "value": "MERGE" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/os/{{endpoint}}/{{_resource_id}}?lean=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "os", "{{endpoint}}", "{{_resource_id}}"],
+              "query": [{ "key": "lean", "value": "1" }]
+            },
+            "description": "POST + x-method-override: PATCH to push the re-extracted payload to an\nalready-deployed config. patchtype: MERGE makes a child array add rows rather\nthan replace the whole collection. The path segment is _ + base64url(id_value),\nor id_path verbatim if the caller supplies one."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Rollback",
+      "description": "DELETE the config from the target instance. Irreversible — use only for rollback.",
+      "item": [
+        {
+          "name": "Delete: {{id_value}}",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var idValue = pm.variables.get('id_value');",
+                  "pm.test('[Rollback] DELETE returned 200 or 204', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});",
+                  "if ([200, 204].indexOf(pm.response.code) >= 0) console.log('DELETED:', idValue);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/os/{{endpoint}}/{{id_value}}?lean=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "os", "{{endpoint}}", "{{id_value}}"],
+              "query": [{ "key": "lean", "value": "1" }]
+            },
+            "description": "DELETE by natural key. Removes the config and all its sub-resources (e.g. launch points for scripts, domain values for domains)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Apply Configuration",
+      "description": "POST to an automation script (exposed OOTB at /api/script/<name>) that runs Admin Mode -> Apply Configuration Changes on the target -- the DB-schema build step required AFTER deploying object/attribute (mxobjectcfg) or relationship changes.\n\nThere is no OOTB single REST call for admin-mode apply, so this invokes a customer automation script. Set applyScript to that script's name (e.g. TMG.CONFIGDB.APPLY), or applyEndpoint for a route other than /api/script. Mirrors deploy-objects.ps1 -Apply.\n\nOnly DB-config types (objects, relationships) need this; other config types take effect without an apply.",
+      "item": [
+        {
+          "name": "Apply: {{applyScript}}",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var baseUrl       = (pm.variables.get('baseUrl') || '').replace(/\\/+$/, '');",
+                  "var applyScript   = (pm.variables.get('applyScript') || '').trim();",
+                  "var applyEndpoint = (pm.variables.get('applyEndpoint') || '').trim();",
+                  "",
+                  "if (!applyScript && !applyEndpoint) {",
+                  "    throw new Error('Set applyScript (automation script name) or applyEndpoint -- no Apply Configuration target configured.');",
+                  "}",
+                  "",
+                  "// applyEndpoint may be an absolute URL or a '/'-path; otherwise use the /api/script route.",
+                  "var url;",
+                  "if (applyEndpoint) {",
+                  "    url = /^https?:\\/\\//.test(applyEndpoint) ? applyEndpoint : baseUrl + applyEndpoint;",
+                  "} else {",
+                  "    url = baseUrl + '/api/script/' + applyScript;",
+                  "}",
+                  "",
+                  "pm.request.url.update(url);",
+                  "console.log('Apply Configuration -> ' + url);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var applyScript   = pm.variables.get('applyScript');",
+                  "var applyEndpoint = pm.variables.get('applyEndpoint');",
+                  "var target = applyEndpoint || ('/api/script/' + applyScript);",
+                  "",
+                  "pm.test('[Apply] Apply Configuration returned 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    console.log('APPLY CONFIGURATION invoked via ' + target);",
+                  "    try { console.log(pm.response.text()); } catch (e) {}",
+                  "} else {",
+                  "    console.error('APPLY FAILED: HTTP ' + pm.response.code);",
+                  "    try { console.error(pm.response.text()); } catch (e) {}",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/script/{{applyScript}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "script", "{{applyScript}}"]
+            },
+            "description": "Invokes the Apply Configuration automation script. The pre-request rebuilds the URL from applyScript / applyEndpoint. Requires that script to exist on the target and to run the ConfigDB apply server-side. No body is needed; '{}' is sent as a placeholder."
+          }
+        }
+      ]
+    }
+  ]
+}

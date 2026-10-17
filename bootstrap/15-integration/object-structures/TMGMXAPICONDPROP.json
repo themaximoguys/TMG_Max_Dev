@@ -1,0 +1,59 @@
+{
+  "aliasconflict": false,
+  "authapp": "MXAPICONDITION",
+  "completehierarchy": false,
+  "configurable": true,
+  "description": "Conditional UI properties by security group and condition for REST config export",
+  "flatsupported": false,
+  "intobjectname": "TMGMXAPICONDPROP",
+  "maxintobjdetail": [
+    {
+      "deleteoncreate": false,
+      "excludebydefault": false,
+      "excludeparentkey": false,
+      "hierarchypath": "CTRLGROUP",
+      "invokeexecute": false,
+      "objectname": "CTRLGROUP",
+      "objectorder": 1,
+      "processorder": 1,
+      "propagateevent": false,
+      "relationjoinrequired": false,
+      "skipdeleteonreplace": false,
+      "skipkeyupdate": false
+    },
+    {
+      "deleteoncreate": true,
+      "excludebydefault": false,
+      "excludeparentkey": true,
+      "hierarchypath": "CTRLGROUP/CTRLCONDITION",
+      "invokeexecute": false,
+      "objectname": "CTRLCONDITION",
+      "objectorder": 1,
+      "parentobjname": "CTRLGROUP",
+      "processorder": 2,
+      "propagateevent": true,
+      "relationjoinrequired": false,
+      "skipdeleteonreplace": false,
+      "skipkeyupdate": false
+    },
+    {
+      "deleteoncreate": true,
+      "excludebydefault": false,
+      "excludeparentkey": true,
+      "hierarchypath": "CTRLGROUP/CTRLCONDITION/CTRLCONDPROP",
+      "invokeexecute": false,
+      "objectname": "CTRLCONDPROP",
+      "objectorder": 1,
+      "parentobjname": "CTRLCONDITION",
+      "processorder": 3,
+      "propagateevent": true,
+      "relationjoinrequired": false,
+      "skipdeleteonreplace": false,
+      "skipkeyupdate": false
+    }
+  ],
+  "queryonly": false,
+  "selfreferencing": false,
+  "userdefined": true,
+  "usewith": "INTEGRATION"
+}

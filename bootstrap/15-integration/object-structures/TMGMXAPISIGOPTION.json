@@ -1,0 +1,28 @@
+{
+  "aliasconflict": false,
+  "completehierarchy": false,
+  "configurable": true,
+  "description": "INTEGRATION-scoped REST transport for SIGOPTION upsert by app + optionname",
+  "flatsupported": false,
+  "intobjectname": "TMGMXAPISIGOPTION",
+  "maxintobjdetail": [
+    {
+      "deleteoncreate": false,
+      "excludebydefault": false,
+      "excludeparentkey": false,
+      "hierarchypath": "SIGOPTION",
+      "invokeexecute": false,
+      "objectname": "SIGOPTION",
+      "objectorder": 1,
+      "processorder": 1,
+      "propagateevent": false,
+      "relationjoinrequired": false,
+      "skipdeleteonreplace": false,
+      "skipkeyupdate": false
+    }
+  ],
+  "queryonly": false,
+  "selfreferencing": false,
+  "userdefined": true,
+  "usewith": "INTEGRATION"
+}

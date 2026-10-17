@@ -1,0 +1,15 @@
+# One manifest per feature / ticket. Order does not matter — maxdev deploys by layer.
+#   maxdev deploy --manifest EXAMPLE            (dry run)
+#   maxdev deploy --manifest EXAMPLE --apply
+# Delete or copy this file; it references artifacts that do not exist yet.
+name: EXAMPLE
+description: Cross over customer email from SR to WO and validate it
+items:
+  - domain: TMGEMAILTYPE
+  - object: WORKORDER                          # adds CUSTOMER_EMAIL (then dbconfig apply)
+  - relationship: WORKORDER__TMG_ORIGSR
+  - autoscript: [WORKORDER.CUSTOMER_EMAIL.VALIDATE]
+  - path: src/07-app-designer/WOTRACK.xml
+manual:
+  - Apply Configuration Changes for WORKORDER (maxdev dbconfig status / apply)
+  - Re-sign Technician app in Application Configuration if the field is shown on mobile
