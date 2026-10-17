@@ -70,7 +70,7 @@ def extract(s: Session, type_id: str, names: list[str] | None = None, like: str 
                          "Pass names, --like PREFIX, --where or --limit.")
     if t.handler == "appxml":
         return _extract_appxml(s, t, os_name, w, limit)
-    recs = s.client.query(os_name, where=w, select=t.select, page_size=100, max_records=limit)
+    recs = s.client.query(os_name, where=w, select=t.select, page_size=min(100, limit or 100), max_records=limit)
     written, unchanged, files = 0, 0, []
     for rec in recs:
         rec = strip_meta(rec)
@@ -252,8 +252,17 @@ def _deploy_appxml(s, os_name, rec, apply, force_replace, stamp) -> dict:
 
 
 # ── diff / drift ───────────────────────────────────────────────────────────
+def _drop_empty(node):
+    """null, [] and {} mean the same thing to Maximo; never report them as a change."""
+    if isinstance(node, dict):
+        return {k: _drop_empty(v) for k, v in node.items() if v not in (None, [], {})}
+    if isinstance(node, list):
+        return [_drop_empty(x) for x in node]
+    return node
+
+
 def _canon(t, rec: dict) -> str:
-    rec = strip_meta(rec)
+    rec = _drop_empty(strip_meta(rec))
     if t.handler == "autoscript":
         rec = dict(rec)
         rec["source"] = store.strip_script_config((rec.get("source") or "").replace("\r\n", "\n")).rstrip("\n") + "\n"
@@ -308,9 +317,14 @@ def doctor(s: Session) -> dict:
         if not t.os:
             rows.append({"type": t.id, "os": "-", "status": t.handler})
             continue
-        found = [o for o in t.os if s.client.os_exists(o)]
-        rows.append({"type": t.id, "os": found[0] if found else " | ".join(t.os),
-                     "status": "ok" if found else "MISSING", "registry_status": t.status})
+        probes = {o: s.client.os_probe(o) for o in t.os}
+        ok = [o for o, v in probes.items() if v == "ok"]
+        if ok:
+            rows.append({"type": t.id, "os": ok[0], "status": "ok", "registry_status": t.status})
+        else:
+            unauth = [o for o, v in probes.items() if v == "unauthorized"]
+            rows.append({"type": t.id, "os": " | ".join(f"{o}:{v}" for o, v in probes.items()),
+                         "status": "NO-AUTH" if unauth else "MISSING", "registry_status": t.status})
     script = False
     try:
         s.client.call_script("TMG_EXPORT_PRES", params={"app": "STARTCNTR"}, method="GET")

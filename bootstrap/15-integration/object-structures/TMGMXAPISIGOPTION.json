@@ -1,15 +1,13 @@
 {
-  "aliasconflict": false,
-  "completehierarchy": false,
+  "authapp": "DESIGNER",
   "configurable": true,
-  "description": "INTEGRATION-scoped REST transport for SIGOPTION upsert by app + optionname",
-  "flatsupported": false,
+  "description": "TMG REST transport: Signature options (cloned from DMSIGOPTION)",
   "intobjectname": "TMGMXAPISIGOPTION",
   "maxintobjdetail": [
     {
-      "deleteoncreate": false,
+      "deleteoncreate": true,
       "excludebydefault": false,
-      "excludeparentkey": false,
+      "excludeparentkey": true,
       "hierarchypath": "SIGOPTION",
       "invokeexecute": false,
       "objectname": "SIGOPTION",
@@ -19,10 +17,42 @@
       "relationjoinrequired": false,
       "skipdeleteonreplace": false,
       "skipkeyupdate": false
+    },
+    {
+      "deleteoncreate": true,
+      "excludebydefault": false,
+      "excludeparentkey": true,
+      "hierarchypath": "SIGOPTION/L_SIGOPTION",
+      "invokeexecute": false,
+      "objectname": "L_SIGOPTION",
+      "objectorder": 1,
+      "parentobjname": "SIGOPTION",
+      "processorder": 2,
+      "propagateevent": false,
+      "relation": "LANGTABLE",
+      "relationcardinality": "UNDEFINED",
+      "relationjoinrequired": false,
+      "skipdeleteonreplace": false,
+      "skipkeyupdate": false
+    },
+    {
+      "deleteoncreate": true,
+      "excludebydefault": false,
+      "excludeparentkey": true,
+      "hierarchypath": "SIGOPTION/LONGDESCRIPTION",
+      "invokeexecute": false,
+      "objectname": "LONGDESCRIPTION",
+      "objectorder": 2,
+      "parentobjname": "SIGOPTION",
+      "processorder": 3,
+      "propagateevent": false,
+      "relation": "LONGDESC",
+      "relationcardinality": "UNDEFINED",
+      "relationjoinrequired": false,
+      "skipdeleteonreplace": false,
+      "skipkeyupdate": false
     }
   ],
   "queryonly": false,
-  "selfreferencing": false,
-  "userdefined": true,
   "usewith": "INTEGRATION"
 }

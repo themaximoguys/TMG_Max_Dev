@@ -1,0 +1,24 @@
+{
+  "authapp": "CONDEXPMGR",
+  "configurable": true,
+  "description": "TMG REST transport: Conditional expressions (cloned from DMCONDITION)",
+  "intobjectname": "TMGMXAPICONDITION",
+  "maxintobjdetail": [
+    {
+      "deleteoncreate": true,
+      "excludebydefault": false,
+      "excludeparentkey": true,
+      "hierarchypath": "CONDITION",
+      "invokeexecute": false,
+      "objectname": "CONDITION",
+      "objectorder": 1,
+      "processorder": 1,
+      "propagateevent": false,
+      "relationjoinrequired": false,
+      "skipdeleteonreplace": false,
+      "skipkeyupdate": false
+    }
+  ],
+  "queryonly": false,
+  "usewith": "INTEGRATION"
+}

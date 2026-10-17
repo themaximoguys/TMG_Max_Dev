@@ -33,7 +33,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import admin, builder, data, engine, ibm_mcp, manifest, registry, scaffold, store
+from . import admin, bootstrap_gen, builder, data, engine, ibm_mcp, manifest, registry, scaffold, store
 from .env import REPO, list_envs
 
 
@@ -105,7 +105,8 @@ def main(argv=None) -> int:
     x.add_argument("--type", default="library", choices=sorted(scaffold.LP_TYPES))
     x.add_argument("--object"); x.add_argument("--attr"); x.add_argument("--js", action="store_true")
 
-    x = sub.add_parser("bootstrap"); x.add_argument("--apply", action="store_true")
+    x = sub.add_parser("bootstrap"); x.add_argument("action", nargs="?", default="deploy", choices=["deploy", "generate"])
+    x.add_argument("--apply", action="store_true"); x.add_argument("--only", nargs="*")
     sub.add_parser("templates")
     x = sub.add_parser("build"); x.add_argument("kind", choices=sorted(builder.KINDS))
     for o in ("object", "attr", "name", "channel", "service", "author", "description", "java_class", "autoscript"):
@@ -245,6 +246,13 @@ def main(argv=None) -> int:
                         raise PermissionError(f"{a.name} may write; re-run with --apply")
                     s.guard_write()
                 _print(c.call_tool(a.name, json.loads(a.args)))
+        elif a.cmd == "bootstrap" and a.action == "generate":
+            defs = bootstrap_gen.build(s.client, a.only)
+            for f in bootstrap_gen.write(defs):
+                print(f"  wrote {f}")
+            for d in defs:
+                if "_error" in d:
+                    print(f"  [SKIP] {d['intobjectname']}: {d['_error']}")
         elif a.cmd == "bootstrap":
             items = engine.resolve_files(None, None, ["bootstrap"])
             r = engine.deploy(s, items, apply=a.apply)

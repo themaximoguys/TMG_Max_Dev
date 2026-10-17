@@ -1,0 +1,72 @@
+{
+  "authapp": "JSONMAP",
+  "configurable": true,
+  "description": "TMG REST transport: JSON mappings (cloned from MXJSONMAPPING)",
+  "intobjectname": "TMGMXJSONMAPPING",
+  "maxintobjdetail": [
+    {
+      "deleteoncreate": false,
+      "excludebydefault": false,
+      "excludeparentkey": false,
+      "hierarchypath": "JSONMAPPING",
+      "invokeexecute": false,
+      "objectname": "JSONMAPPING",
+      "objectorder": 1,
+      "processorder": 1,
+      "propagateevent": false,
+      "relationjoinrequired": false,
+      "skipdeleteonreplace": false,
+      "skipkeyupdate": false
+    },
+    {
+      "deleteoncreate": true,
+      "excludebydefault": false,
+      "excludeparentkey": true,
+      "hierarchypath": "JSONMAPPING/JSONMAPDETAIL",
+      "invokeexecute": false,
+      "objectname": "JSONMAPDETAIL",
+      "objectorder": 1,
+      "parentobjname": "JSONMAPPING",
+      "processorder": 2,
+      "propagateevent": true,
+      "relation": "JSONMAPDETAIL",
+      "relationjoinrequired": false,
+      "skipdeleteonreplace": false,
+      "skipkeyupdate": false
+    },
+    {
+      "deleteoncreate": true,
+      "excludebydefault": false,
+      "excludeparentkey": true,
+      "hierarchypath": "JSONMAPPING/JSONMAPDETAIL/JSONMAPPROPS",
+      "invokeexecute": false,
+      "objectname": "JSONMAPPROPS",
+      "objectorder": 1,
+      "parentobjname": "JSONMAPDETAIL",
+      "processorder": 3,
+      "propagateevent": true,
+      "relation": "JSONMAPPROPS",
+      "relationjoinrequired": false,
+      "skipdeleteonreplace": false,
+      "skipkeyupdate": false
+    },
+    {
+      "deleteoncreate": true,
+      "excludebydefault": false,
+      "excludeparentkey": true,
+      "hierarchypath": "JSONMAPPING/JSONMAPDETAIL/JSONMAPPROPS/JSONMAPPROPVALUES",
+      "invokeexecute": false,
+      "objectname": "JSONMAPPROPVALUES",
+      "objectorder": 1,
+      "parentobjname": "JSONMAPPROPS",
+      "processorder": 4,
+      "propagateevent": true,
+      "relation": "JSONVALUESIN",
+      "relationjoinrequired": false,
+      "skipdeleteonreplace": false,
+      "skipkeyupdate": false
+    }
+  ],
+  "queryonly": false,
+  "usewith": "INTEGRATION"
+}

@@ -128,6 +128,20 @@ class MaximoClient:
     def whoami(self) -> dict:
         return self.request("GET", "api/whoami")
 
+    def os_probe(self, os_name: str) -> str:
+        """ok | unauthorized (BMXAA9301E) | missing (BMXAA4216E) | unusable (e.g. BMXAA1283E MIGRATIONMGR-only)"""
+        try:
+            self.request("GET", f"api/os/{os_name.lower()}", params={"lean": 1, "oslc.pageSize": 1, "oslc.select": "*"})
+            return "ok"
+        except MaximoError as e:
+            if "BMXAA9301E" in e.message:
+                return "unauthorized"
+            if e.status == 404 and "BMXAA4216E" in e.message:
+                return "missing"
+            if e.status in (400, 404):
+                return "unusable"
+            raise
+
     def os_exists(self, os_name: str) -> bool:
         try:
             self.request("GET", f"api/os/{os_name.lower()}", params={"lean": 1, "oslc.pageSize": 1, "oslc.select": "*"})

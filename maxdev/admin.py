@@ -26,7 +26,7 @@ def _prefix(s) -> str:
 
 
 def dbconfig_pending(s) -> dict:
-    rows = s.client.query("MXOBJECTCFG", where='changed!="N"', select="objectname,changed,description",
+    rows = s.client.query(__import__("maxdev.registry", fromlist=["get"]).get("object").resolve_os(s.client, s.vals), where='changed!="N"', select="objectname,changed,description",
                           page_size=200)
     return {"env": s.env, "pending": [{"objectname": r.get("objectname"), "changed": r.get("changed")} for r in rows],
             "count": len(rows),

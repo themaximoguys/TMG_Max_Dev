@@ -58,7 +58,8 @@ types:
     key: [groupname]
     folder: 02-security/groups
     handler: json
-    note: Extract carries application authorisations; review grants before deploying to a shared environment.
+    select: "groupname,description,independent,authallsites,authallgls,authallstorerooms,authlaborall,authlaborcrew,authlaborself,authlaborsuper,authpersongroup,nullrepfac,sidenav"
+    note: Header fields only by default — select=* pulls every application grant and times out on real tenants. Grants are the separate `grant` type.
 
   - id: sigoption
     label: Signature options
@@ -82,7 +83,7 @@ types:
   - id: message
     label: Messages (MAXMESSAGES)
     layer: 0
-    os: [MXAPIMAXMESSAGES, MXAPIMAXMESSAGE]
+    os: [MXAPIMESSAGE, MXMESSAGE]
     key: [msggroup, msgkey]
     folder: 03-messages
     name: [msggroup, msgkey]
@@ -93,8 +94,9 @@ types:
   - id: persongroup
     label: Person groups (workflow / escalation routing)
     layer: 0
-    os: MXAPIPERGROUP
+    os: [MXAPIPERSONGROUP]
     key: [persongroup]
+    select: "persongroup,description,iscrewworkgroup,persongroupteam{*}"
     folder: 02-security/person-groups
     handler: json
     note: Needed before workflows, escalations and comm templates that route to them. Person members are environment data — review before promoting.
@@ -103,7 +105,7 @@ types:
   - id: object
     label: Objects & attributes (Database Configuration)
     layer: 1
-    os: MXOBJECTCFG
+    os: [TMGMXOBJECTCFG, MXOBJECTCFG]
     key: [objectname]
     folder: 04-objects
     handler: json
@@ -113,7 +115,7 @@ types:
   - id: relationship
     label: Relationships
     layer: 1
-    os: MXAPIRELATIONSHIP
+    os: [TMGMXAPIRELATIONSHIP, MXAPIRELATIONSHIP]
     key: [parent, name]
     folder: 05-relationships
     name: [parent, name]
@@ -134,7 +136,7 @@ types:
   - id: condition
     label: Conditional expressions
     layer: 1
-    os: MXAPICONDITION
+    os: [TMGMXAPICONDITION, MXAPICONDITION]
     key: [conditionnum]
     folder: 06-conditions
     handler: json
@@ -143,7 +145,7 @@ types:
   - id: appxml
     label: Application Designer presentations (incl. LIBRARY, LOOKUPS)
     layer: 2
-    os: MXAPIPRESENTATION
+    os: [TMGMXAPIPRESENTATION, MXAPIPRESENTATION]
     key: [app]
     folder: 07-app-designer
     handler: appxml
@@ -152,7 +154,7 @@ types:
   - id: appdesc
     label: Application descriptions (MAXAPPS)
     layer: 2
-    os: [MXAPIMAXAPPS, MXAPIAPPLICATION]
+    os: [MXAPIMAXAPP, MXAPIMAXAPPS]
     key: [app]
     folder: 07-app-designer/_apps
     handler: json
@@ -209,7 +211,7 @@ types:
   - id: startcenter
     label: Start center templates
     layer: 2
-    os: [MXAPISCTEMPLATE]
+    os: [TMGMXSCTEMPLATE, MXAPISCTEMPLATE]
     key: [sctemplateid]
     folder: 07-app-designer/_startcenters
     handler: json
@@ -238,7 +240,7 @@ types:
   - id: escalation
     label: Escalations
     layer: 3
-    os: MXAPIESCALATION
+    os: [TMGMXAPIESCALATION, MXAPIESCALATION]
     key: [escalation]
     folder: 11-escalations
     handler: json
@@ -284,31 +286,32 @@ types:
     key: [intobjectname]
     folder: 15-integration/object-structures
     handler: json
+    select: "intobjectname,description,usewith,authapp,queryonly,configurable,userdefined,selfreferencing,flatsupported,aliasconflict,completehierarchy,maxintobjdetail{*}"
   - id: publishchannel
     label: Publish channels
     layer: 7
-    os: MXAPIIFACEOUT
+    os: [TMGMXIFACEOUT, MXIFACEOUT, MXAPIIFACEOUT]
     key: [ifacename]
     folder: 15-integration/publish-channels
     handler: json
   - id: enterpriseservice
     label: Enterprise services
     layer: 7
-    os: MXAPIIFACEIN
+    os: [TMGMXIFACEIN, MXIFACEIN, MXAPIIFACEIN]
     key: [ifacename]
     folder: 15-integration/enterprise-services
     handler: json
   - id: invocationchannel
     label: Invocation channels
     layer: 7
-    os: MXAPIIFACEINVOKE
+    os: [TMGMXIFACEINVOKE, MXIFACEINVOKE, MXAPIIFACEINVOKE]
     key: [ifacename]
     folder: 15-integration/invocation-channels
     handler: json
   - id: endpoint
     label: End points
     layer: 7
-    os: MXAPIENDPOINT
+    os: [MXENDPOINT, MXAPIENDPOINT]
     key: [endpointname]
     folder: 15-integration/end-points
     handler: json
@@ -316,21 +319,21 @@ types:
   - id: extsystem
     label: External systems
     layer: 7
-    os: [MXEXTSYSTEM, MXAPIEXTSYS]
+    os: [TMGMXEXTSYSTEM, MXEXTSYSTEM, MXAPIEXTSYS]
     key: [extsysname]
     folder: 15-integration/external-systems
     handler: json
   - id: ifacecontrol
     label: Integration controls
     layer: 7
-    os: MXAPIIFACECONTROL
+    os: [TMGMXIFACECONTROL, MXIFACECONTROL, MXAPIIFACECONTROL]
     key: [ifacecontrol]
     folder: 15-integration/integration-controls
     handler: json
   - id: jsonmapping
     label: JSON mappings
     layer: 7
-    os: [MXAPIJSONMAPPING]
+    os: [TMGMXJSONMAPPING, MXJSONMAPPING, MXAPIJSONMAPPING]
     key: [mapname]
     folder: 15-integration/json-mappings
     handler: json

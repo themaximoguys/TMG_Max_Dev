@@ -1,0 +1,41 @@
+{
+  "authapp": "EXTSYSTEM",
+  "configurable": true,
+  "description": "TMG REST transport: Integration controls (cloned from MXIFACECONTROL)",
+  "intobjectname": "TMGMXIFACECONTROL",
+  "maxintobjdetail": [
+    {
+      "deleteoncreate": true,
+      "excludebydefault": false,
+      "excludeparentkey": true,
+      "hierarchypath": "MAXIFACECONTROL",
+      "invokeexecute": false,
+      "objectname": "MAXIFACECONTROL",
+      "objectorder": 1,
+      "processorder": 1,
+      "propagateevent": false,
+      "relationjoinrequired": false,
+      "skipdeleteonreplace": false,
+      "skipkeyupdate": false
+    },
+    {
+      "deleteoncreate": true,
+      "excludebydefault": false,
+      "excludeparentkey": true,
+      "hierarchypath": "MAXIFACECONTROL/MAXCONTROLVALUE",
+      "invokeexecute": false,
+      "objectname": "MAXCONTROLVALUE",
+      "objectorder": 1,
+      "parentobjname": "MAXIFACECONTROL",
+      "processorder": 2,
+      "propagateevent": false,
+      "relation": "MAXCONTROLVALUE",
+      "relationcardinality": "UNDEFINED",
+      "relationjoinrequired": false,
+      "skipdeleteonreplace": false,
+      "skipkeyupdate": false
+    }
+  ],
+  "queryonly": false,
+  "usewith": "INTEGRATION"
+}

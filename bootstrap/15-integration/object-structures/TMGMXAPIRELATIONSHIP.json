@@ -1,0 +1,24 @@
+{
+  "authapp": "CONFIGUR",
+  "configurable": true,
+  "description": "TMG REST transport: Relationships (cloned from DMMAXRELATIONSHIP)",
+  "intobjectname": "TMGMXAPIRELATIONSHIP",
+  "maxintobjdetail": [
+    {
+      "deleteoncreate": true,
+      "excludebydefault": false,
+      "excludeparentkey": true,
+      "hierarchypath": "MAXRELATIONSHIP",
+      "invokeexecute": false,
+      "objectname": "MAXRELATIONSHIP",
+      "objectorder": 1,
+      "processorder": 1,
+      "propagateevent": false,
+      "relationjoinrequired": false,
+      "skipdeleteonreplace": false,
+      "skipkeyupdate": false
+    }
+  ],
+  "queryonly": false,
+  "usewith": "INTEGRATION"
+}

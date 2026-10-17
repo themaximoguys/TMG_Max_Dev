@@ -1,16 +1,13 @@
 {
-  "aliasconflict": false,
-  "authapp": "MXAPICONDITION",
-  "completehierarchy": false,
+  "authapp": "CONDEXPMGR",
   "configurable": true,
-  "description": "Conditional UI properties by security group and condition for REST config export",
-  "flatsupported": false,
+  "description": "TMG REST transport: Conditional UI (CTRLGROUP tree) (cloned from DMCTRLGROUP)",
   "intobjectname": "TMGMXAPICONDPROP",
   "maxintobjdetail": [
     {
-      "deleteoncreate": false,
+      "deleteoncreate": true,
       "excludebydefault": false,
-      "excludeparentkey": false,
+      "excludeparentkey": true,
       "hierarchypath": "CTRLGROUP",
       "invokeexecute": false,
       "objectname": "CTRLGROUP",
@@ -31,7 +28,9 @@
       "objectorder": 1,
       "parentobjname": "CTRLGROUP",
       "processorder": 2,
-      "propagateevent": true,
+      "propagateevent": false,
+      "relation": "CTRLCONDITION",
+      "relationcardinality": "UNDEFINED",
       "relationjoinrequired": false,
       "skipdeleteonreplace": false,
       "skipkeyupdate": false
@@ -46,14 +45,31 @@
       "objectorder": 1,
       "parentobjname": "CTRLCONDITION",
       "processorder": 3,
-      "propagateevent": true,
+      "propagateevent": false,
+      "relation": "CTRLCONDPROP",
+      "relationcardinality": "UNDEFINED",
+      "relationjoinrequired": false,
+      "skipdeleteonreplace": false,
+      "skipkeyupdate": false
+    },
+    {
+      "deleteoncreate": true,
+      "excludebydefault": false,
+      "excludeparentkey": true,
+      "hierarchypath": "CTRLGROUP/CTRLCONDITION/CTRLCONDPROP/L_CTRLCONDPROP",
+      "invokeexecute": false,
+      "objectname": "L_CTRLCONDPROP",
+      "objectorder": 1,
+      "parentobjname": "CTRLCONDPROP",
+      "processorder": 4,
+      "propagateevent": false,
+      "relation": "DMLCTRLCONDPROP",
+      "relationcardinality": "UNDEFINED",
       "relationjoinrequired": false,
       "skipdeleteonreplace": false,
       "skipkeyupdate": false
     }
   ],
   "queryonly": false,
-  "selfreferencing": false,
-  "userdefined": true,
   "usewith": "INTEGRATION"
 }

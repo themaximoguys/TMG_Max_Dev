@@ -1,0 +1,24 @@
+{
+  "authapp": "CONFIGUR",
+  "configurable": true,
+  "description": "TMG REST transport: Lookup maps (cloned from DMMAXLOOKUPMAP)",
+  "intobjectname": "TMGMXLOOKUPMAP",
+  "maxintobjdetail": [
+    {
+      "deleteoncreate": true,
+      "excludebydefault": false,
+      "excludeparentkey": true,
+      "hierarchypath": "MAXLOOKUPMAP",
+      "invokeexecute": false,
+      "objectname": "MAXLOOKUPMAP",
+      "objectorder": 1,
+      "processorder": 1,
+      "propagateevent": false,
+      "relationjoinrequired": false,
+      "skipdeleteonreplace": false,
+      "skipkeyupdate": false
+    }
+  ],
+  "queryonly": false,
+  "usewith": "INTEGRATION"
+}

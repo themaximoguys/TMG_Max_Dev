@@ -52,7 +52,7 @@ class ArtifactType:
         cache = _os_cache.setdefault(client.base, {})
         for name in self.os:
             if name not in cache:
-                cache[name] = client.os_exists(name)
+                cache[name] = client.os_probe(name) == "ok"
             if cache[name]:
                 return name
         return self.os[-1]

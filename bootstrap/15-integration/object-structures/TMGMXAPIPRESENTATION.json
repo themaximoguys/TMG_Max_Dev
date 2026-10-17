@@ -1,0 +1,16 @@
+{
+  "authapp": "DESIGNER",
+  "configurable": true,
+  "description": "TMG REST transport: App Designer presentation XML (MAXPRESENTATION) (cloned from MAXPRESENTATION)",
+  "intobjectname": "TMGMXAPIPRESENTATION",
+  "maxintobjdetail": [
+    {
+      "hierarchypath": "MAXPRESENTATION",
+      "objectname": "MAXPRESENTATION",
+      "objectorder": 1,
+      "processorder": 1
+    }
+  ],
+  "queryonly": false,
+  "usewith": "INTEGRATION"
+}
