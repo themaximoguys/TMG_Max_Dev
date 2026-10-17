@@ -1,58 +1,61 @@
 ---
 name: maximo-dev
-description: Use for any Maximo/MAS development in the TMG_Max_Dev repo — extracting, editing, diffing or deploying Maximo configuration (domains, objects, relationships, conditions, App Designer XML, automation scripts, actions, escalations, cron tasks, workflows, integration, security, reports) through the maxdev CLI or the tmg-maximo-dev MCP server. Triggers on extract from Maximo, deploy to Maximo, push config, Maximo diff/drift, App Designer XML change, new automation script in the repo, DB Config apply, Migration Manager package, IBM Maximo MCP server, connect a new Maximo environment, bootstrap / predeployment, doctor, BMXAA9301E or BMXAA4216E errors.
+description: How to do IBM Maximo / MAS 9 Manage development in the TMG_Max_Dev repo with the maxdev CLI (python3 -m maxdev) and the tmg-maximo-dev MCP server — connecting an environment, pulling (extracting) configuration into src/, editing it, diffing against live, and deploying it back safely through Maximo's REST API. Use this skill whenever the user wants to pull, push, sync, compare or change anything in Maximo from this repo — domains, objects/attributes (Database Configuration), relationships, conditions, App Designer screens, automation scripts, actions, escalations, cron tasks, workflows, roles, security groups/sig options/grants, publish channels, enterprise services, endpoints, object structures, classifications, reports — and also for connecting or bootstrapping a new Maximo environment, running doctor, predeployment, or diagnosing BMXAA9301E / BMXAA4216E / BMXAA1283E API errors. Use it even when the user just says "deploy this to demo", "what changed on dev", or "get WOTRACK", without naming maxdev.
 ---
 
 # Maximo development with maxdev
 
-The repo is the source of truth; Maximo is the target. Every change follows the same loop:
-**extract → edit file → lint/diff → dry-run deploy → apply → diff again.**
+The repo's `src/` folder is the source of truth, and Maximo is the target. Every change follows one loop:
 
-## Rules (do not break)
-1. Never write to Maximo without a dry run first. CLI: deploy without `--apply`; MCP: `apply=false`. Show the user the plan and get a yes before applying.
-2. Never deploy to an environment the user didn't name. Protected environments (`MAXIMO_PROTECTED=true`) refuse writes, and that is intended — never flip the flag yourself.
-3. Edit files in `src/`, not live records. The MCP `query` tool is for reading only.
-4. Extract with a filter (names, `--like TMG`, `--where`). Whole-type extracts of OOTB data are refused.
-5. App Designer: never use `--force-replace` unless the user asks. The default merge keeps changes made in the UI.
-6. No demo or seed data loading unless the user asks for it explicitly.
-7. Report results honestly. Read the receipt; FAILED or not-attempted rows must be told to the user.
+**extract → edit the file → lint / diff → dry-run deploy → (user says yes) → apply → diff again**
 
-## New environment: predeploy first (once)
-Without these steps, about a third of the areas fail with BMXAA9301E (not authorised) or BMXAA4216E (unknown object). With `mxe.int.enableosauth=1`, every object structure needs an authorisation app.
-1. `maxdev ping --env X` and `maxdev doctor --env X`. Doctor separates `NO-AUTH` from `MISSING`.
-2. `maxdev bootstrap authapps --env X`. Dry run, then `--apply`. It sets the auth app on IBM structures that ship without one (MXOBJECTCFG, MXIFACEOUT, MXIFACEINVOKE, MXEXTSYSTEM, MXIFACECONTROL, MXJSONMAPPING). It never overwrites an existing value.
-3. `maxdev bootstrap --env X`. Dry run, then `--apply`. It creates `src/00_predeployment/`: the TMG* structures plus TMG_EXPORT_PRES.
-4. `maxdev doctor --env X` again. Every area should be ok, except SLA and response plans.
+Each step exists for a reason:
+- Maximo config writes aren't a transaction: a failed step leaves earlier writes in place.
+- App Designer screens are whole documents: one bad write can wipe UI changes other people made.
+- Working from a file means a human can review the change before it touches a shared environment.
 
-Rule for TMG structures: use the IBM structure whenever one exists. If it only lacks an auth app, set the auth app (step 2). Clone into a TMG* structure (`maxdev bootstrap generate`, from the tenant's own DM* definition) only when no REST-usable structure exists. A DM* MIGRATIONMGR structure is refused by REST (BMXAA1283E). Ask the user before creating any new TMG structure.
+## Working agreements
 
-## Lessons from the live demo (MAS 9)
-- `src/00_predeployment` always deploys before everything else, in any deploy that includes it.
-- Heavy child trees need a narrow `select` and a small `page` in registry.yaml. Signs of this are a timeout, an HTTP 500, or a read-only child error on page 2. Records the server can't serialise go in that type's `skip:` list. OSLC has no `not in`, so maxdev writes `!=` clauses.
-- Rows that come back `_hidden` or without their key are skipped and counted, never written.
-- Maximo's Jython has no Python stdlib: `import re`/`json`/`os` fail at runtime. Use `java.*` instead. Lint enforces this. Java-backed modules such as `math` and `time` are fine.
-- App Designer XML comes back as one line. Extract pretty-prints it, with a check that only whitespace changes.
-- Extracted records can carry environment-generated ids (e.g. `alndomainid`). They're fine within one environment, but strip them before promoting to another one.
-- Diff ignores null vs [] vs {}. A diff that shows only those is not a change.
+- **Dry run, then ask.** A deploy without `--apply` (MCP: `apply=false`) shows exactly what would be created, updated or merged. Show that plan and wait for a clear yes before applying, because the user may share the environment with others.
+- **Only the environment the user named.** `MAXIMO_PROTECTED=true` environments refuse writes on purpose. The user controls that flag; don't edit `environments/.env.*` yourself.
+- **Change files, not live records.** Edit under `src/`, then deploy. The `query` / `call_script` tools are for reading and investigating.
+- **Filtered extracts.** Pass names, `--like TMG`, `--where` or `--limit`. A whole-type pull of OOTB data is thousands of IBM records nobody wants in Git; maxdev refuses it without a filter.
+- **App Designer merges.** Deploy backs up the live screen and merges the repo copy onto it, so UI-made changes survive. Use `--force-replace` only when the user explicitly wants the live screen overwritten.
+- **No demo/seed data loads** unless asked.
+- **Report what actually happened.** Read the deploy output or receipt (`.maxdev/receipts/<env>/`), and tell the user about any `FAILED` or `not-attempted` rows. Deploy stops at the first failure, so later items didn't run.
 
-## Where things go
-- `maxdev types` (MCP `list_artifact_types`) gives every area: layer, object structure, folder, gotchas.
-- The coverage map is in `docs/COVERAGE.md`; app development (MAF, Java, BIRT) is in `docs/APPLICATION_DEVELOPMENT.md`.
+## Connecting an environment (once per environment)
+
+On MAS 9, `mxe.int.enableosauth=1` means an object structure only works over REST if it has an authorisation app. Many config areas also have no REST-usable IBM structure at all. So a new environment needs a one-time predeployment before roughly a third of the areas work.
+
+1. `maxdev ping --env X`, then `maxdev doctor --env X`. Doctor marks each area `ok`, `NO-AUTH` (structure exists without an auth app) or `MISSING`.
+2. `maxdev bootstrap authapps --env X`. Dry run first, then `--apply` after a yes. It sets an auth app on IBM structures that ship without one, and never overwrites an existing value.
+3. `maxdev bootstrap --env X`. Dry run first, then `--apply` after a yes. It deploys `src/00_predeployment/`: the TMG* object structures plus the read-only `TMG_EXPORT_PRES` script.
+4. Run `maxdev doctor --env X` again. Everything should be `ok` except SLA and response plans.
+
+**TMG structure rule** (the user decided this, so keep to it):
+- Use IBM's structure whenever one exists.
+- If it only lacks an auth app, set the auth app.
+- Clone into a `TMG*` structure (`maxdev bootstrap generate`) only when nothing REST-usable exists, e.g. only a Migration Manager `DM*` version, which REST refuses with BMXAA1283E.
+- Ask before creating any new TMG structure.
+
+## Finding your way
+
+- `maxdev types` (MCP `list_artifact_types`) lists every area: its layer, object structure, `src/` folder and known gotchas. `maxdev/registry.yaml` is the single table behind it.
+- Coverage map: `docs/COVERAGE.md`. Mobile/MAF, Java and BIRT: `docs/APPLICATION_DEVELOPMENT.md`.
+- Group one feature's files in `manifests/<TICKET>.yaml`, with `items:` and `manual:` steps (see `manifests/EXAMPLE.yaml`). Deploy with `maxdev deploy --manifest <TICKET>`. Deploy order is by layer, with `src/00_predeployment` always first.
+- If a pull or deploy errors, read `references/troubleshooting.md`. It covers timeouts, HTTP 500s, BMXAA codes, empty diffs, generated IDs, and promoting to another environment.
 
 ## Automation scripts
-- For a new script, `maxdev build <kind> ...` (MCP `build_script`). Then fill the business logic following `docs/standards/TMG_AUTOSCRIPT_STANDARDS.md` and the `create-automation-script` skill.
-- To convert Java, run `maxdev java analyze X.java` (MCP `analyze_java`), then the `convert-java-to-script` skill.
-- Lint is mandatory: `maxdev lint` / MCP `lint_script`. Deploy blocks on lint errors.
-- One script per MBO + event: add the rule to the existing script instead of creating another.
 
-## Workflows
-Generate with the `maximo-workflow` skill and save the JSON under `src/13-workflows/`, with its person groups, roles and actions in their folders. Deploy them together with a manifest.
+- New script: `maxdev build <kind> --object X [--attr F | --name N]` (MCP `build_script`) fills a TMG template. Then write the business logic following `docs/standards/TMG_AUTOSCRIPT_STANDARDS.md` and the `create-automation-script` skill.
+- Java to script: `maxdev java analyze X.java` (MCP `analyze_java`), then the `convert-java-to-script` skill.
+- `maxdev lint` (MCP `lint_script`) runs before every deploy, and deploy blocks on lint errors.
+- Maximo's Jython has **no Python standard library**: `import re`, `json`, `os` and `datetime` fail at runtime. Use `java.util.regex`, `java.util.Calendar` and so on. Java-backed modules like `math` and `time` are fine.
+- Keep one script per MBO + event. Add a new rule to the existing script so launch points don't fight.
 
-## Database Configuration
-After deploying `object` changes, run `maxdev dbconfig status`. Structural changes need Admin Mode, so ask the user before running `dbconfig apply --admin` — it logs users out.
+## Workflows, Database Configuration, IBM MCP
 
-## Change sets
-Group a feature's files in `manifests/<TICKET>.yaml`, with `items:` and `manual:` steps (see `manifests/EXAMPLE.yaml`). Deploy with `maxdev deploy --manifest <TICKET>`.
-
-## IBM MCP server (MAS 9.2)
-Use `maxdev ibm-mcp tools --env X` or the MCP tools `ibm_mcp_tools` / `ibm_mcp_call`. Tools that aren't marked read-only need `apply`. The feature set is partial, so treat its results as something to verify.
+- **Workflows.** Generate with the `maximo-workflow` skill and save under `src/13-workflows/`. Person groups, roles and actions go in their own folders, and the manifest deploys them together.
+- **Database Configuration.** After deploying `object` changes, run `maxdev dbconfig status`. Structural changes need Admin Mode, which logs users out, so ask before `dbconfig apply --admin`.
+- **IBM MCP server (MAS 9.2, partial feature set).** Use `maxdev ibm-mcp tools --env X` or `ibm_mcp_tools` / `ibm_mcp_call`. Tools that aren't marked read-only need `apply`. Treat results as something to verify.

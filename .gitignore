@@ -13,3 +13,4 @@ __pycache__/
 # editors / os
 .DS_Store
 .idea/
+.claude/skills/*-workspace/

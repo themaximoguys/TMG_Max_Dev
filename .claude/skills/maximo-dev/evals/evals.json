@@ -1,0 +1,47 @@
+{
+ "skill_name": "maximo-dev",
+ "evals": [
+  {
+   "id": 1,
+   "prompt": "pull the ASSETSTATUS domain and the LOCATIONS object config from demo-ro and tell me if anything differs from whats live",
+   "expected_output": "Filtered extracts of domain ASSETSTATUS and object LOCATIONS into src/, a diff against demo-ro, and a short report (same / changed).",
+   "files": [],
+   "assertions": [
+    "Used filtered extracts (named ASSETSTATUS / LOCATIONS), not a whole-type pull",
+    "Used environment demo-ro only",
+    "Ran a diff of the pulled files against live",
+    "Reported a clear result per artifact (same or changed)",
+    "Made no write attempt (no --apply)"
+   ]
+  },
+  {
+   "id": 2,
+   "prompt": "need a validation on WORKORDER.WOPRIORITY: if priority is 1 the work order description must be longer than 20 chars, otherwise error. build the script the TMG way and get it ready to deploy to demo-ro but dont push anything yet",
+   "expected_output": "Script built from TMG field_validate template in src/09-automation-scripts/attribute/, business logic filled with Jython-safe code (no python stdlib), lint clean, dry-run deploy shown, no apply.",
+   "files": [],
+   "assertions": [
+    "Script created from a TMG template via maxdev build (field_validate kind)",
+    "Script placed under src/09-automation-scripts/attribute/",
+    "Business logic checks WOPRIORITY == 1 and DESCRIPTION length > 20",
+    "No Python stdlib imports (re/json/os/datetime) in the script",
+    "maxdev lint reports 0 errors on the script",
+    "Dry-run deploy shown; no --apply run",
+    "Response asks the user before deploying"
+   ]
+  },
+  {
+   "id": 3,
+   "prompt": "we just connected a new QA tenant. doctor says publishchannel NO-AUTH MXIFACEOUT:unauthorized, relationship MISSING TMGMXAPIRELATIONSHIP:missing | MXAPIRELATIONSHIP:missing, and pulling reports dies on page 2 with BMXAA0031E The REPORTSCHED object is read only. what do i do, step by step",
+   "expected_output": "Explains authapps for NO-AUTH, predeploy bootstrap for MISSING (dry run then apply with approval, TMG clone only when nothing usable), explicit select for reports; does not run writes.",
+   "files": [],
+   "assertions": [
+    "Explains NO-AUTH fix = set auth app on IBM MXIFACEOUT (bootstrap authapps), not a clone",
+    "Explains MISSING relationship fix = predeploy TMG structure via bootstrap (clone only because nothing usable exists)",
+    "Says dry run first and get approval before --apply",
+    "Gives the reports fix: explicit select instead of select=* (REPORTSCHED child)",
+    "Says to re-run doctor to confirm",
+    "Ran no write commands"
+   ]
+  }
+ ]
+}
