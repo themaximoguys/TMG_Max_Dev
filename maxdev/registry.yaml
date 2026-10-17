@@ -138,7 +138,7 @@ types:
     folder: 05-lookupmaps
     name: [target, targetattr]
     handler: json
-    note: No OOTB REST structure is guaranteed; create TMGMXLOOKUPMAP from bootstrap/ if doctor reports it missing.
+    note: No OOTB REST structure is guaranteed; create TMGMXLOOKUPMAP from 00_predeployment/ if doctor reports it missing.
 
   - id: condition
     label: Conditional expressions
@@ -204,7 +204,7 @@ types:
     folder: 07-app-designer/_conditional-ui
     name: [app, optionname, groupname]
     handler: replace
-    note: Three-level tree — a parent MERGE leaves stale child rows, so it is replaced whole. Needs TMGMXAPICONDPROP from bootstrap/.
+    note: Three-level tree — a parent MERGE leaves stale child rows, so it is replaced whole. Needs TMGMXAPICONDPROP from 00_predeployment/.
 
   - id: query
     label: Saved queries (QUERY)
@@ -365,7 +365,7 @@ types:
     folder: 17-service-mgmt/sla
     handler: json
     status: verify
-    note: No OOTB REST structure on the reference tenant. Create TMGMXAPISLA from bootstrap/ if needed.
+    note: No OOTB REST structure on the reference tenant. Create TMGMXAPISLA from 00_predeployment/ if needed.
   - id: responseplan
     label: Response plans
     layer: 9

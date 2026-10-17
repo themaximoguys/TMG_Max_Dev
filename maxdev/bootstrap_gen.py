@@ -24,7 +24,7 @@ import json
 from .env import REPO
 from .store import dumps
 
-OUT = REPO / "bootstrap" / "15-integration" / "object-structures"
+OUT = REPO / "00_predeployment" / "15-integration" / "object-structures"
 
 # new name: (source structure on tenant, authorisation app, purpose)
 PLAN = {
