@@ -1,6 +1,6 @@
 ---
 name: maximo-dev
-description: Use for any Maximo/MAS development in the TMG_Max_Dev repo — extracting, editing, diffing or deploying Maximo configuration (domains, objects, relationships, conditions, App Designer XML, automation scripts, actions, escalations, cron tasks, workflows, integration, security, reports) through the maxdev CLI or the tmg-maximo-dev MCP server. Triggers on extract from Maximo, deploy to Maximo, push config, Maximo diff/drift, App Designer XML change, new automation script in the repo, DB Config apply, Migration Manager package, IBM Maximo MCP server.
+description: Use for any Maximo/MAS development in the TMG_Max_Dev repo — extracting, editing, diffing or deploying Maximo configuration (domains, objects, relationships, conditions, App Designer XML, automation scripts, actions, escalations, cron tasks, workflows, integration, security, reports) through the maxdev CLI or the tmg-maximo-dev MCP server. Triggers on extract from Maximo, deploy to Maximo, push config, Maximo diff/drift, App Designer XML change, new automation script in the repo, DB Config apply, Migration Manager package, IBM Maximo MCP server, connect a new Maximo environment, bootstrap / predeployment, doctor, BMXAA9301E or BMXAA4216E errors.
 ---
 
 # Maximo development with maxdev
@@ -16,6 +16,24 @@ The repo is the source of truth; Maximo is the target. Every change follows the 
 5. App Designer: never use `--force-replace` unless the user asks. The default merge keeps changes made in the UI.
 6. No demo or seed data loading unless the user asks for it explicitly.
 7. Report results honestly. Read the receipt; FAILED or not-attempted rows must be told to the user.
+
+## New environment: predeploy first (once)
+Without these steps, about a third of the areas fail with BMXAA9301E (not authorised) or BMXAA4216E (unknown object). With `mxe.int.enableosauth=1`, every object structure needs an authorisation app.
+1. `maxdev ping --env X` and `maxdev doctor --env X`. Doctor separates `NO-AUTH` from `MISSING`.
+2. `maxdev bootstrap authapps --env X`. Dry run, then `--apply`. It sets the auth app on IBM structures that ship without one (MXOBJECTCFG, MXIFACEOUT, MXIFACEINVOKE, MXEXTSYSTEM, MXIFACECONTROL, MXJSONMAPPING). It never overwrites an existing value.
+3. `maxdev bootstrap --env X`. Dry run, then `--apply`. It creates `src/00_predeployment/`: the TMG* structures plus TMG_EXPORT_PRES.
+4. `maxdev doctor --env X` again. Every area should be ok, except SLA and response plans.
+
+Rule for TMG structures: use the IBM structure whenever one exists. If it only lacks an auth app, set the auth app (step 2). Clone into a TMG* structure (`maxdev bootstrap generate`, from the tenant's own DM* definition) only when no REST-usable structure exists. A DM* MIGRATIONMGR structure is refused by REST (BMXAA1283E). Ask the user before creating any new TMG structure.
+
+## Lessons from the live demo (MAS 9)
+- `src/00_predeployment` always deploys before everything else, in any deploy that includes it.
+- Heavy child trees need a narrow `select` and a small `page` in registry.yaml. Signs of this are a timeout, an HTTP 500, or a read-only child error on page 2. Records the server can't serialise go in that type's `skip:` list. OSLC has no `not in`, so maxdev writes `!=` clauses.
+- Rows that come back `_hidden` or without their key are skipped and counted, never written.
+- Maximo's Jython has no Python stdlib: `import re`/`json`/`os` fail at runtime. Use `java.*` instead. Lint enforces this. Java-backed modules such as `math` and `time` are fine.
+- App Designer XML comes back as one line. Extract pretty-prints it, with a check that only whitespace changes.
+- Extracted records can carry environment-generated ids (e.g. `alndomainid`). They're fine within one environment, but strip them before promoting to another one.
+- Diff ignores null vs [] vs {}. A diff that shows only those is not a change.
 
 ## Where things go
 - `maxdev types` (MCP `list_artifact_types`) gives every area: layer, object structure, folder, gotchas.
