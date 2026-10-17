@@ -96,6 +96,14 @@ class AppXmlTests(unittest.TestCase):
         self.assertEqual(c["loss_sample"], ["textbox|t_ui"])
         self.assertEqual(c["changed"], 1)
 
+    def test_pretty_is_lossless_and_idempotent(self):
+        one_line = LIVE_XML.replace("\n", " ")
+        out = appxml.pretty(one_line)
+        self.assertGreater(out.count("\n"), 4)
+        self.assertEqual(appxml.fingerprints(out), appxml.fingerprints(one_line))
+        self.assertEqual(appxml.pretty(out), out)
+        self.assertIn('xmlns:x="urn:x"', out)
+
     def test_merge_keeps_live_and_adds_repo(self):
         out, stats = appxml.merge(LIVE_XML, REPO_XML)
         self.assertIn("ADDEDINUI", out)          # kept

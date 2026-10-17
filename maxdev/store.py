@@ -181,8 +181,9 @@ def save_script(t: ArtifactType, rec: dict, fmt: str | None = None) -> tuple[Pat
 
 # ── App Designer ───────────────────────────────────────────────────────────
 def save_appxml(t: ArtifactType, app: str, xml: str) -> tuple[Path, bool]:
+    from . import appxml as ax
     path = t.dir / f"{SAFE.sub('_', app.upper())}.xml"
-    return path, write_text(path, xml.replace("\r\n", "\n"))
+    return path, write_text(path, ax.pretty(xml.replace("\r\n", "\n")))
 
 
 # ── discovery ──────────────────────────────────────────────────────────────

@@ -22,7 +22,36 @@ NSDECL = re.compile(r'xmlns(?::[\w.-]+)?="[^"]*"')
 
 
 def _root(xml: str) -> ET.Element:
+    _register_ns(xml)
     return ET.fromstring(xml.encode("utf-8"))
+
+
+def _register_ns(xml: str) -> None:
+    for m in re.finditer(r'xmlns:([\w.-]+)="([^"]*)"', xml[:4000]):
+        ET.register_namespace(m.group(1), m.group(2))
+
+
+def _content(xml: str):
+    """Element tree content ignoring layout whitespace: (tag, attrs, stripped text, stripped tail)."""
+    return [(e.tag, tuple(e.attrib.items()), (e.text or "").strip(), (e.tail or "").strip())
+            for e in _root(xml).iter()]
+
+
+def pretty(xml: str) -> str:
+    """One element per line, 2-space indent, attribute order preserved. Raises if the
+    reformatted document differs from the original in anything but whitespace."""
+    _register_ns(xml)
+    root = _root(xml)
+    for e in root.iter():                      # drop layout-only whitespace before re-indenting
+        if e.text is not None and not e.text.strip():
+            e.text = None
+        if e.tail is not None and not e.tail.strip():
+            e.tail = None
+    ET.indent(root, space="  ")
+    out = _reinject_ns(xml, DECL + ET.tostring(root, encoding="unicode") + "\n")
+    if _content(out) != _content(xml):
+        raise ValueError("pretty-print changed XML content — refusing to rewrite")
+    return out
 
 
 def fingerprints(xml: str | None) -> Counter:
@@ -120,6 +149,6 @@ def merge(live: str, repo: str) -> tuple[str, dict]:
         base.attrib.clear()
         base.attrib.update(over.attrib)
     _merge(base, over, stats)
-    out = _reinject_ns(live, DECL + ET.tostring(base, encoding="unicode"))
+    out = pretty(_reinject_ns(live, DECL + ET.tostring(base, encoding="unicode")))
     stats["merged_elements"] = sum(1 for _ in _root(out).iter())
     return out, stats
