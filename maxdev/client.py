@@ -242,8 +242,11 @@ class MaximoClient:
         return self.request("POST", href, params={"action": f"wsmethod:{method}", "lean": 1}, body=body or {},
                             headers={"x-method-override": "PATCH"})
 
-    def presentation_href(self, app: str) -> str:
-        return f"{self.base}/api/os/mxapipresentation/{resource_id(app.upper())}"
+    def presentation_href(self, app: str, os_name: str = "MXAPIPRESENTATION") -> str:
+        hits = self.find(os_name, {"app": app.upper()})
+        if hits:
+            return hits[0]["href"]
+        return f"{self.base}/api/os/{os_name.lower()}/{resource_id(app.upper())}"
 
 
 def chunked(it: Iterable, n: int):

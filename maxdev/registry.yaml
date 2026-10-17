@@ -88,7 +88,6 @@ types:
     folder: 03-messages
     name: [msggroup, msgkey]
     handler: json
-    status: verify
     note: Custom error/info messages raised by automation scripts (service.error(group,key)).
 
   - id: persongroup
@@ -130,7 +129,6 @@ types:
     folder: 05-lookupmaps
     name: [target, targetattr]
     handler: json
-    status: verify
     note: No OOTB REST structure is guaranteed; create TMGMXLOOKUPMAP from bootstrap/ if doctor reports it missing.
 
   - id: condition
@@ -158,7 +156,6 @@ types:
     key: [app]
     folder: 07-app-designer/_apps
     handler: json
-    status: verify
 
   - id: datarestriction
     label: Data restrictions (security)
@@ -206,7 +203,6 @@ types:
     folder: 07-app-designer/_queries
     name: [app, clausename]
     handler: json
-    status: verify
 
   - id: startcenter
     label: Start center templates
@@ -215,7 +211,6 @@ types:
     key: [sctemplateid]
     folder: 07-app-designer/_startcenters
     handler: json
-    status: verify
 
   # ── Layer 3 ──────────────────────────────────────────────────────────────
   - id: autoscript
@@ -275,7 +270,6 @@ types:
     key: [templateid]
     folder: 14-comm-templates
     handler: json
-    status: verify
     note: Was blocked on the reference tenant (OS missing). Doctor checks both names.
 
   # ── Layer 7 ──────────────────────────────────────────────────────────────
@@ -377,7 +371,6 @@ types:
     folder: 18-mobile/inspection-forms
     name: [inspformnum, revision]
     handler: json
-    status: verify
     note: Needs the API user's group authorised for the inspections structure (BMXAA9301E otherwise).
   - id: mafapp
     label: MAF / Maximo Mobile & role-based app customisations

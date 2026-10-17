@@ -1,5 +1,11 @@
 # Coverage: every Maximo development area
 
+**Live status (TMG demo, MAS 9, 2026-10-16):**
+- 39 of 41 areas work over REST, and every one of them passed the extract → diff "same" test against live data.
+- SLAs and response plans have no structure yet.
+- MAF, Java and data loads are manual by design.
+- 15 of the working areas go through the TMG\* structures created by `maxdev bootstrap`. They were cloned from the tenant's own definitions, and each one adds the authorisation app that `mxe.int.enableosauth=1` requires.
+
 Source of truth is `maxdev/registry.yaml`. `maxdev types` prints it, and `maxdev doctor --env X` checks each object structure on a live tenant.
 
 Route column key:

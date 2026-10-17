@@ -108,6 +108,8 @@ RULES = [
     ("error", "no-threads", re.compile(r"^\s*(import|from)\s+(threading|subprocess|multiprocessing)\b"), "not allowed in scripts"),
     ("error", "no-async", re.compile(r"^\s*async\s+def\b|\bawait\b"), "not Jython 2.7"),
     ("error", "sql-concat", re.compile(r"setWhere\([^)]*[\"']\s*\+|setWhere\([^)]*\+\s*[\"']"), "build SQL with SqlFormat, never string concatenation"),
+    ("error", "no-python-stdlib", re.compile(r"^\s*(import|from)\s+(re|json|os|datetime|string|collections|urllib\w*|base64|csv|random|functools|traceback|logging)\b"),
+     "Maximo's Jython has no Python stdlib (ImportError at runtime) — use the java.* equivalent"),
     ("warn", "bare-except", re.compile(r"^\s*except\s*:"), "catch Exception and log + re-raise"),
 ]
 

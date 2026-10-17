@@ -243,7 +243,7 @@ def _deploy_appxml(s, os_name, rec, apply, force_replace, stamp) -> dict:
     if live is None:
         s.client.create(os_name, body)
     else:
-        s.client.merge(s.client.presentation_href(app), body)
+        s.client.merge(s.client.presentation_href(app, os_name), body)
     after = _live_presentation(s, os_name, app)
     if ax.fingerprints(after) != ax.fingerprints(payload):
         raise MaximoError(500, f"{app}: read-back does not match what was sent (write silently dropped?)", os_name)

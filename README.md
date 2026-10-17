@@ -79,6 +79,9 @@ Deploy rules:
 
 ## Status
 
+**Live on the TMG demo (MAS 9):** 39 of 41 areas pass extract → diff against real data, and the bootstrap structures are installed. Write path proven: bootstrap created 16 records, and the export script was updated and verified live. On a new tenant, run `maxdev bootstrap generate` and then `maxdev bootstrap --apply` once.
+
+
 The engine, formats and safety rules are tested offline (27 tests). These items still need a live check on a TMG tenant:
 - Object-structure names marked `verify` in `maxdev types`; run `maxdev doctor` to check them.
 - The Admin Mode and Migration Manager service paths.
