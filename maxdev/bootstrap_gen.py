@@ -6,7 +6,10 @@ OOTB — they exist only as Migration Manager (DM*, usewith=MIGRATIONMGR, refuse
 by REST with BMXAA1283E) or as MX* integration structures with no authapp
 (BMXAA9301E even for MAXADMIN).
 
-Rule: a TMG clone is made ONLY when no REST-usable structure exists for the area.
+Rule 1: if IBM ships the structure but without an authorisation app (MX*), set the
+        authapp on IBM's record (AUTHAPP_PATCH, `maxdev bootstrap authapps`). No clone.
+Rule 2: a TMG clone is made ONLY when no REST-usable structure exists at all
+        (only a MIGRATIONMGR DM* version, or nothing).
 Where IBM ships a working MXAPI* (MXAPIAUTOSCRIPT, MXAPIACTION, MXAPIWFPROCESS ...)
 the registry uses it directly and nothing is cloned.
 
@@ -25,7 +28,6 @@ OUT = REPO / "bootstrap" / "15-integration" / "object-structures"
 
 # new name: (source structure on tenant, authorisation app, purpose)
 PLAN = {
-    "TMGMXOBJECTCFG":       ("MXOBJECTCFG",       "CONFIGUR",   "Database Configuration objects/attributes"),
     "TMGMXAPIRELATIONSHIP": ("DMMAXRELATIONSHIP", "CONFIGUR",   "Relationships"),
     "TMGMXLOOKUPMAP":       ("DMMAXLOOKUPMAP",    "CONFIGUR",   "Lookup maps"),
     "TMGMXAPICONDITION":    ("DMCONDITION",       "CONDEXPMGR", "Conditional expressions"),
@@ -35,13 +37,41 @@ PLAN = {
     "TMGMXAPIROLE":         ("DMROLE",            "ROLE",       "Workflow / escalation roles (MAXROLE)"),
     "TMGMXAPIESCALATION":   ("DMESCALATION",      "ESCALATION", "Escalations + ref points + notifications"),
     "TMGMXSCTEMPLATE":      ("DMSCTEMPLATE",      "STARTCNTR",  "Start center templates"),
-    "TMGMXIFACEOUT":        ("MXIFACEOUT",        "PUBLISH",    "Publish channels"),
     "TMGMXIFACEIN":         ("DMMAXIFACEIN",      "INTSRV",     "Enterprise services"),
-    "TMGMXIFACEINVOKE":     ("MXIFACEINVOKE",     "INVOKE",     "Invocation channels"),
-    "TMGMXEXTSYSTEM":       ("MXEXTSYSTEM",       "EXTSYSTEM",  "External systems"),
-    "TMGMXIFACECONTROL":    ("MXIFACECONTROL",    "EXTSYSTEM",  "Integration controls"),
-    "TMGMXJSONMAPPING":     ("MXJSONMAPPING",     "JSONMAP",    "JSON mappings"),
 }
+
+# IBM structures that exist OOTB but ship without an authorisation app.
+AUTHAPP_PATCH = {
+    "MXOBJECTCFG": "CONFIGUR",
+    "MXIFACEOUT": "PUBLISH",
+    "MXIFACEINVOKE": "INVOKE",
+    "MXEXTSYSTEM": "EXTSYSTEM",
+    "MXIFACECONTROL": "EXTSYSTEM",
+    "MXJSONMAPPING": "JSONMAP",
+}
+
+
+def authapps(s, apply: bool = False) -> list[dict]:
+    """Set authapp on AUTHAPP_PATCH structures that have none. Never overwrites an existing value."""
+    c = s.client
+    rows = c.query("MXINTOBJECT", where="intobjectname in [%s]" % ",".join('"%s"' % k for k in AUTHAPP_PATCH),
+                   select="intobjectname,authapp,href")
+    out = []
+    for r in rows:
+        name, cur, want = r["intobjectname"], r.get("authapp"), AUTHAPP_PATCH[r["intobjectname"]]
+        if cur:
+            out.append({"os": name, "authapp": cur, "action": "already-set" if cur == want else "kept-existing"})
+            continue
+        if not apply:
+            out.append({"os": name, "authapp": want, "action": "would-set"})
+            continue
+        s.guard_write()
+        c.merge(r["href"], {"intobjectname": name, "authapp": want})
+        out.append({"os": name, "authapp": want, "action": "set", "probe": c.os_probe(name)})
+    missing = set(AUTHAPP_PATCH) - {r["intobjectname"] for r in rows}
+    out += [{"os": m, "action": "not-on-tenant"} for m in sorted(missing)]
+    return out
+
 
 DETAIL_DROP = {"maxintobjdetailid", "intobjectname", "href", "localref", "_rowstamp",
                "changeby", "changedate", "objectid", "parentobjid", "userdefined"}

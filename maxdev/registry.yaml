@@ -113,7 +113,7 @@ types:
   - id: object
     label: Objects & attributes (Database Configuration)
     layer: 1
-    os: [TMGMXOBJECTCFG, MXOBJECTCFG]
+    os: MXOBJECTCFG
     key: [objectname]
     folder: 04-objects
     handler: json
@@ -293,7 +293,7 @@ types:
   - id: publishchannel
     label: Publish channels
     layer: 7
-    os: [TMGMXIFACEOUT, MXIFACEOUT, MXAPIIFACEOUT]
+    os: MXIFACEOUT
     key: [ifacename]
     folder: 15-integration/publish-channels
     handler: json
@@ -307,7 +307,7 @@ types:
   - id: invocationchannel
     label: Invocation channels
     layer: 7
-    os: [TMGMXIFACEINVOKE, MXIFACEINVOKE, MXAPIIFACEINVOKE]
+    os: MXIFACEINVOKE
     key: [ifacename]
     folder: 15-integration/invocation-channels
     handler: json
@@ -322,21 +322,21 @@ types:
   - id: extsystem
     label: External systems
     layer: 7
-    os: [TMGMXEXTSYSTEM, MXEXTSYSTEM, MXAPIEXTSYS]
+    os: MXEXTSYSTEM
     key: [extsysname]
     folder: 15-integration/external-systems
     handler: json
   - id: ifacecontrol
     label: Integration controls
     layer: 7
-    os: [TMGMXIFACECONTROL, MXIFACECONTROL, MXAPIIFACECONTROL]
+    os: MXIFACECONTROL
     key: [ifacecontrol]
     folder: 15-integration/integration-controls
     handler: json
   - id: jsonmapping
     label: JSON mappings
     layer: 7
-    os: [TMGMXJSONMAPPING, MXJSONMAPPING, MXAPIJSONMAPPING]
+    os: MXJSONMAPPING
     key: [mapname]
     folder: 15-integration/json-mappings
     handler: json

@@ -25,7 +25,8 @@ pip install -r requirements.txt            # requests, PyYAML, mcp
 # fill environments/.env.demo (git-ignored, starts read-only)
 python3 -m maxdev ping --env demo          # who am I
 python3 -m maxdev doctor --env demo        # which object structures exist for every type
-python3 -m maxdev bootstrap --env demo     # dry run; add --apply to install TMG helpers
+python3 -m maxdev bootstrap authapps --env demo  # set auth app on IBM MX* structures (dry run; --apply)
+python3 -m maxdev bootstrap --env demo     # TMG structures only where IBM has none usable (dry run; --apply)
 ```
 
 `pip install -e .` also gives you the `maxdev` and `maxdev-mcp` commands.
@@ -79,7 +80,7 @@ Deploy rules:
 
 ## Status
 
-**Live on the TMG demo (MAS 9):** 39 of 41 areas pass extract → diff against real data, and the bootstrap structures are installed. Write path proven: bootstrap created 16 records, and the export script was updated and verified live. On a new tenant, run `maxdev bootstrap generate` and then `maxdev bootstrap --apply` once.
+**Live on the TMG demo (MAS 9):** 39 of 41 areas pass extract → diff against real data, and the bootstrap structures are installed. Write path proven: bootstrap created 16 records, and the export script was updated and verified live. On a new tenant, run once: `maxdev bootstrap authapps --apply` sets the authorisation app on 6 IBM MX\* structures; then `maxdev bootstrap --apply` creates 10 TMG structures, only for areas that have no REST-usable IBM structure.
 
 
 The engine, formats and safety rules are tested offline (27 tests). These items still need a live check on a TMG tenant:

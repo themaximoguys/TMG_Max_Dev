@@ -4,7 +4,9 @@
 - 39 of 41 areas work over REST, and every one of them passed the extract → diff "same" test against live data.
 - SLAs and response plans have no structure yet.
 - MAF, Java and data loads are manual by design.
-- 15 of the working areas go through the TMG\* structures created by `maxdev bootstrap`. They were cloned from the tenant's own definitions, and each one adds the authorisation app that `mxe.int.enableosauth=1` requires.
+- `mxe.int.enableosauth=1` requires every structure to have an authorisation app.
+  - 6 IBM MX\* structures (MXOBJECTCFG, MXIFACEOUT, MXIFACEINVOKE, MXEXTSYSTEM, MXIFACECONTROL, MXJSONMAPPING) had none, so `maxdev bootstrap authapps` set one. No copy was made.
+  - 10 areas have no REST-usable IBM structure (only a Migration Manager DM\* version, or none), so they use TMG\* copies of the tenant's own definitions: relationships, lookup maps, conditions, conditional UI, sig options, App Designer screens, escalations, start centers, enterprise services and roles.
 
 Source of truth is `maxdev/registry.yaml`. `maxdev types` prints it, and `maxdev doctor --env X` checks each object structure on a live tenant.
 

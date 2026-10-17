@@ -20,7 +20,8 @@
   maxdev lint     [PATH ...]                  TMG standards check (default: all scripts in src/)
   maxdev java     analyze FILE.java [...]     which template / launch point a Java class converts to
   maxdev new      autoscript NAME --type object|attribute|action|library|... (minimal skeleton)
-  maxdev bootstrap [--apply]                  install the TMG helper structures/scripts
+  maxdev bootstrap [authapps|generate] [--apply]  1) authapps: set auth app on IBM MX* structures
+                                              2) deploy TMG structures only where none is REST-usable
   maxdev ibm-mcp  info | tools | call NAME [--args JSON] [--apply]   IBM MAS 9.2 MCP server
 
 Deploy is a dry run unless --apply is given. Environments marked
@@ -105,7 +106,7 @@ def main(argv=None) -> int:
     x.add_argument("--type", default="library", choices=sorted(scaffold.LP_TYPES))
     x.add_argument("--object"); x.add_argument("--attr"); x.add_argument("--js", action="store_true")
 
-    x = sub.add_parser("bootstrap"); x.add_argument("action", nargs="?", default="deploy", choices=["deploy", "generate"])
+    x = sub.add_parser("bootstrap"); x.add_argument("action", nargs="?", default="deploy", choices=["deploy", "generate", "authapps"])
     x.add_argument("--apply", action="store_true"); x.add_argument("--only", nargs="*")
     sub.add_parser("templates")
     x = sub.add_parser("build"); x.add_argument("kind", choices=sorted(builder.KINDS))
@@ -246,6 +247,9 @@ def main(argv=None) -> int:
                         raise PermissionError(f"{a.name} may write; re-run with --apply")
                     s.guard_write()
                 _print(c.call_tool(a.name, json.loads(a.args)))
+        elif a.cmd == "bootstrap" and a.action == "authapps":
+            for r in bootstrap_gen.authapps(s, apply=a.apply):
+                print(f"  {r['action']:<15}{r['os']:<16}{r.get('authapp', '')}  {r.get('probe', '')}")
         elif a.cmd == "bootstrap" and a.action == "generate":
             defs = bootstrap_gen.build(s.client, a.only)
             for f in bootstrap_gen.write(defs):
