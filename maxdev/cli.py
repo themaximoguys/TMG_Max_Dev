@@ -258,7 +258,7 @@ def main(argv=None) -> int:
                 if "_error" in d:
                     print(f"  [SKIP] {d['intobjectname']}: {d['_error']}")
         elif a.cmd == "bootstrap":
-            items = engine.resolve_files(None, None, ["00_predeployment"])
+            items = engine.resolve_files(None, None, ["src/00_predeployment"])
             r = engine.deploy(s, items, apply=a.apply)
             for row in r["results"]:
                 print(f"  {row['action']:<15}{row['file']}  {row.get('error', '')}")

@@ -59,7 +59,7 @@ def dbconfig_apply(s, admin: bool = False) -> dict:
     try:
         out["result"] = s.client.call_script(script, body={"admin": admin})
     except MaximoError as e:
-        out["error"] = (f"{e}. Add 00_predeployment/09-automation-scripts/library/{script}.py and run `maxdev bootstrap --apply` "
+        out["error"] = (f"{e}. Add src/00_predeployment/09-automation-scripts/library/{script}.py and run `maxdev bootstrap --apply` "
                         "or apply in Database Configuration > Apply Configuration Changes.")
     finally:
         if admin:

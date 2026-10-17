@@ -167,7 +167,8 @@ def resolve_files(type_id: str | None, names: list[str] | None, paths: list[str]
                 sub = 1 if (store.load_json(f).get("type") or "").upper() == "GROUP" else 0
             except Exception:
                 pass
-        return (t.layer, order[t.id], sub, str(f))
+        pre = 0 if registry.PREDEPLOY.resolve() in f.resolve().parents else 1
+        return (pre, t.layer, order[t.id], sub, str(f))
     return sorted(uniq, key=sort_key)
 
 

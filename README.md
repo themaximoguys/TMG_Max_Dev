@@ -62,7 +62,7 @@ Deploy rules:
 |---|---|
 | `src/NN-*/` | Artifacts, one file per record, a folder per area (see [docs/COVERAGE.md](docs/COVERAGE.md)) |
 | `manifests/*.yaml` | Change sets: one per feature/ticket, including manual steps |
-| `00_predeployment/` | **Deploy first, once per environment.** TMG helper object structures + `TMG_EXPORT_PRES` script (see its README) |
+| `src/00_predeployment/` | **Deploy first, once per environment.** TMG helper object structures + `TMG_EXPORT_PRES` script (see its README) |
 | `maxdev/` | Engine, CLI, MCP server, IBM MCP client, script builder. `registry.yaml` drives everything |
 | `catalog/` | TMG script templates (28) and samples (69), from TMG_MAX_CODE (MIT) |
 | `docs/standards/` | TMG_AUTOSCRIPT_STANDARDS.md (authoritative) |

@@ -95,12 +95,12 @@ def ordered(ids: list[str] | None = None) -> list[ArtifactType]:
     return sorted(sel, key=lambda t: (t.layer, list(types()).index(t.id)))
 
 
-PREDEPLOY = REPO / "00_predeployment"
-ROOTS = [SRC, PREDEPLOY]
+PREDEPLOY = SRC / "00_predeployment"
+ROOTS = [PREDEPLOY, SRC]          # predeploy first: it sits inside src/
 
 
 def type_for_path(path: Path) -> ArtifactType | None:
-    """Map a file to its type by folder. Works for src/ and for 00_predeployment/, which
+    """Map a file to its type by folder. Works for src/ and for src/00_predeployment/, which
     mirrors src/ layout. Longest folder wins (07-app-designer/_queries beats 07-app-designer)."""
     path = path.resolve()
     for root in ROOTS:
