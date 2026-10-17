@@ -70,10 +70,22 @@ def extract(s: Session, type_id: str, names: list[str] | None = None, like: str 
                          "Pass names, --like PREFIX, --where or --limit.")
     if t.handler == "appxml":
         return _extract_appxml(s, t, os_name, w, limit)
-    recs = s.client.query(os_name, where=w, select=t.select, page_size=min(100, limit or 100), max_records=limit)
-    written, unchanged, files = 0, 0, []
+    if t.skip:
+        excl = " and ".join('%s!="%s"' % (t.key[0], x) for x in t.skip)   # OSLC has no "not in"
+        w = f"{w} and {excl}" if w else excl
+    recs = s.client.query(os_name, where=w, select=t.select, page_size=min(t.page, limit or t.page), max_records=limit)
+    written, unchanged, files, skipped = 0, 0, [], []
     for rec in recs:
+        if rec.get("_hidden"):
+            # API-hidden rows (e.g. SaaS-internal properties) come back without their key
+            skipped.append({"reason": "hidden by API", "href": rec.get("href", "")[-60:]})
+            continue
         rec = strip_meta(rec)
+        try:
+            store.key_of(t, rec)
+        except ValueError as e:
+            skipped.append({"reason": str(e), "href": ""})
+            continue
         if t.handler == "autoscript":
             path, changed = store.save_script(t, rec)
         else:
@@ -82,7 +94,8 @@ def extract(s: Session, type_id: str, names: list[str] | None = None, like: str 
         written += changed
         unchanged += not changed
     return {"type": t.id, "os": os_name, "where": w, "records": len(recs),
-            "written": written, "unchanged": unchanged, "files": files}
+            "written": written, "unchanged": unchanged, "skipped": len(skipped),
+            "skipped_detail": skipped[:20], "files": files}
 
 
 def _live_presentation(s: Session, os_name: str, app: str) -> str | None:

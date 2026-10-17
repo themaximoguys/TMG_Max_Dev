@@ -1,0 +1,41 @@
+{
+  "authapp": "SECURGROUP",
+  "configurable": true,
+  "description": "TMG REST transport: Sig-option grants (MAXGROUP + APPLICATIONAUTH only) (cloned from DMMAXGROUP)",
+  "intobjectname": "TMGMXAPIGRANT",
+  "maxintobjdetail": [
+    {
+      "deleteoncreate": true,
+      "excludebydefault": false,
+      "excludeparentkey": true,
+      "hierarchypath": "MAXGROUP",
+      "invokeexecute": false,
+      "objectname": "MAXGROUP",
+      "objectorder": 1,
+      "processorder": 1,
+      "propagateevent": false,
+      "relationjoinrequired": false,
+      "skipdeleteonreplace": false,
+      "skipkeyupdate": false
+    },
+    {
+      "deleteoncreate": true,
+      "excludebydefault": false,
+      "excludeparentkey": true,
+      "hierarchypath": "MAXGROUP/APPLICATIONAUTH",
+      "invokeexecute": false,
+      "objectname": "APPLICATIONAUTH",
+      "objectorder": 3,
+      "parentobjname": "MAXGROUP",
+      "processorder": 4,
+      "propagateevent": false,
+      "relation": "APPLICATIONAUTH",
+      "relationcardinality": "MULTIPLE",
+      "relationjoinrequired": false,
+      "skipdeleteonreplace": false,
+      "skipkeyupdate": false
+    }
+  ],
+  "queryonly": false,
+  "usewith": "INTEGRATION"
+}

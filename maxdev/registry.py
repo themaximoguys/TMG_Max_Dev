@@ -27,6 +27,8 @@ class ArtifactType:
     post: str = ""
     status: str = "ok"
     note: str = ""
+    page: int = 100                  # oslc.pageSize for extract (small for heavy child trees)
+    skip: list[str] = field(default_factory=list)   # records the server cannot serialise
 
     @property
     def dir(self) -> Path:

@@ -178,11 +178,13 @@ types:
   - id: grant
     label: Sig-option grants (APPLICATIONAUTH)
     layer: 2
-    os: MXAPIGROUP
+    os: [TMGMXAPIGRANT]
     key: [groupname]
     folder: 02-security/grants
     handler: json
-    note: Grants live under the group's applicationauth children; deploy merges, never removes.
+    select: "groupname,applicationauth{app,optionname,conditionnum}"
+    page: 5
+    note: No REST structure exposes APPLICATIONAUTH (MXAPIGROUP only via apps x options x users, which times out), so TMGMXAPIGRANT is a bootstrap clone of DMMAXGROUP limited to MAXGROUP + APPLICATIONAUTH. One file per group; deploy merges, never removes.
 
   - id: formula
     label: Attribute formulas
@@ -290,6 +292,8 @@ types:
     folder: 15-integration/object-structures
     handler: json
     select: "intobjectname,description,usewith,authapp,queryonly,configurable,userdefined,selfreferencing,flatsupported,aliasconflict,completehierarchy,maxintobjdetail{*}"
+    page: 20
+    skip: [DMEXPGROUP]
   - id: publishchannel
     label: Publish channels
     layer: 7
@@ -396,6 +400,7 @@ types:
     layer: 11
     os: REP_REPORTING
     key: [appname, reportname]
+    select: "reportname,appname,description,reportnum,reportfolder,runtype,recordlimit,priority,detail,norequestpage,editenabled,scheduleonly,toolbarlocation,toolbaricon,toolbarsequence,usewherewithparam,dp,ql,pad,attacheddoc,iscogdashboard,usecogprompt"
     folder: 19-reports
     name: [appname, reportname]
     handler: json

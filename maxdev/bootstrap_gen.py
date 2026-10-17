@@ -35,6 +35,8 @@ PLAN = {
     "TMGMXAPISIGOPTION":    ("DMSIGOPTION",       "DESIGNER",   "Signature options"),
     "TMGMXAPIPRESENTATION": (None,                "DESIGNER",   "App Designer presentation XML (MAXPRESENTATION)"),
     "TMGMXAPIROLE":         ("DMROLE",            "ROLE",       "Workflow / escalation roles (MAXROLE)"),
+    "TMGMXAPIGRANT":        ("DMMAXGROUP",        "SECURGROUP", "Sig-option grants (MAXGROUP + APPLICATIONAUTH only)",
+                             ["MAXGROUP", "MAXGROUP/APPLICATIONAUTH"]),
     "TMGMXAPIESCALATION":   ("DMESCALATION",      "ESCALATION", "Escalations + ref points + notifications"),
     "TMGMXSCTEMPLATE":      ("DMSCTEMPLATE",      "STARTCNTR",  "Start center templates"),
     "TMGMXIFACEIN":         ("DMMAXIFACEIN",      "INTSRV",     "Enterprise services"),
@@ -84,12 +86,13 @@ def _clean_detail(d: dict) -> dict:
 
 def build(client, names: list[str] | None = None) -> list[dict]:
     want = {n: PLAN[n] for n in (names or PLAN)}
-    sources = sorted({s for s, _, _ in want.values() if s})
+    want = {n: (v + (None,))[:4] for n, v in want.items()}
+    sources = sorted({v[0] for v in want.values() if v[0]})
     rows = client.query("MXINTOBJECT", where="intobjectname in [%s]" % ",".join('"%s"' % s for s in sources),
                         select="intobjectname,description,maxintobjdetail{*}", page_size=50)
     by = {r["intobjectname"]: r for r in rows}
     out = []
-    for name, (src, app, purpose) in want.items():
+    for name, (src, app, purpose, keep) in want.items():
         if src is None:
             details = [{"objectname": "MAXPRESENTATION", "hierarchypath": "MAXPRESENTATION",
                         "objectorder": 1, "processorder": 1}]
@@ -97,7 +100,8 @@ def build(client, names: list[str] | None = None) -> list[dict]:
             if src not in by:
                 out.append({"intobjectname": name, "_error": f"source {src} not on tenant"})
                 continue
-            details = [_clean_detail(d) for d in by[src].get("maxintobjdetail") or []]
+            details = [_clean_detail(d) for d in by[src].get("maxintobjdetail") or []
+                       if keep is None or d.get("hierarchypath") in keep]
             details.sort(key=lambda d: (str(d.get("hierarchypath", "")).count("/"), d.get("processorder") or 0))
         out.append({
             "intobjectname": name,
