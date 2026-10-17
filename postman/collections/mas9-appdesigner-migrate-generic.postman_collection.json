@@ -21,7 +21,7 @@
   "item": [
     {
       "name": "0. Setup — Deploy Export Script",
-      "description": "Deploy TMG_EXPORT_PRES autoscript once per environment before running Extract.\nAlready deployed on  Dev. Run here for mvndemo02 or any new environment.",
+      "description": "Deploy TMG_EXPORT_PRES autoscript once per environment before running Extract.\nAlready deployed on  Dev. Run here for each new environment or any new environment.",
       "item": [
         {
           "name": "Deploy TMG_EXPORT_PRES (one-time per env)",
