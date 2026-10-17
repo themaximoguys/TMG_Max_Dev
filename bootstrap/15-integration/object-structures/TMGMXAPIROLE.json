@@ -1,0 +1,41 @@
+{
+  "authapp": "ROLE",
+  "configurable": true,
+  "description": "TMG REST transport: Workflow / escalation roles (MAXROLE) (cloned from DMROLE)",
+  "intobjectname": "TMGMXAPIROLE",
+  "maxintobjdetail": [
+    {
+      "deleteoncreate": true,
+      "excludebydefault": false,
+      "excludeparentkey": true,
+      "hierarchypath": "MAXROLE",
+      "invokeexecute": false,
+      "objectname": "MAXROLE",
+      "objectorder": 1,
+      "processorder": 1,
+      "propagateevent": false,
+      "relationjoinrequired": false,
+      "skipdeleteonreplace": false,
+      "skipkeyupdate": false
+    },
+    {
+      "deleteoncreate": true,
+      "excludebydefault": false,
+      "excludeparentkey": true,
+      "hierarchypath": "MAXROLE/LONGDESCRIPTION",
+      "invokeexecute": false,
+      "objectname": "LONGDESCRIPTION",
+      "objectorder": 1,
+      "parentobjname": "MAXROLE",
+      "processorder": 2,
+      "propagateevent": false,
+      "relation": "LONGDESC",
+      "relationcardinality": "UNDEFINED",
+      "relationjoinrequired": false,
+      "skipdeleteonreplace": false,
+      "skipkeyupdate": false
+    }
+  ],
+  "queryonly": false,
+  "usewith": "INTEGRATION"
+}

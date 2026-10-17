@@ -6,6 +6,10 @@ OOTB — they exist only as Migration Manager (DM*, usewith=MIGRATIONMGR, refuse
 by REST with BMXAA1283E) or as MX* integration structures with no authapp
 (BMXAA9301E even for MAXADMIN).
 
+Rule: a TMG clone is made ONLY when no REST-usable structure exists for the area.
+Where IBM ships a working MXAPI* (MXAPIAUTOSCRIPT, MXAPIACTION, MXAPIWFPROCESS ...)
+the registry uses it directly and nothing is cloned.
+
 Fix without touching IBM's structures: clone the tenant's definition into a TMG*
 INTEGRATION structure with an authapp. Reading the definitions is read-only;
 `maxdev bootstrap --apply` creates them (needs MAXIMO_PROTECTED=false).
@@ -28,6 +32,7 @@ PLAN = {
     "TMGMXAPICONDPROP":     ("DMCTRLGROUP",       "CONDEXPMGR", "Conditional UI (CTRLGROUP tree)"),
     "TMGMXAPISIGOPTION":    ("DMSIGOPTION",       "DESIGNER",   "Signature options"),
     "TMGMXAPIPRESENTATION": (None,                "DESIGNER",   "App Designer presentation XML (MAXPRESENTATION)"),
+    "TMGMXAPIROLE":         ("DMROLE",            "ROLE",       "Workflow / escalation roles (MAXROLE)"),
     "TMGMXAPIESCALATION":   ("DMESCALATION",      "ESCALATION", "Escalations + ref points + notifications"),
     "TMGMXSCTEMPLATE":      ("DMSCTEMPLATE",      "STARTCNTR",  "Start center templates"),
     "TMGMXIFACEOUT":        ("MXIFACEOUT",        "PUBLISH",    "Publish channels"),

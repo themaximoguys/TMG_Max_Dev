@@ -100,6 +100,15 @@ types:
     handler: json
     note: Needed before workflows, escalations and comm templates that route to them. Person members are environment data — review before promoting.
 
+  - id: role
+    label: Roles (workflow / escalation / comm template routing)
+    layer: 0
+    os: [TMGMXAPIROLE]
+    key: [maxrole]
+    folder: 02-security/roles
+    handler: json
+    note: Only DMROLE (Migration Manager, REST-refused) ships OOTB, so TMGMXAPIROLE is a bootstrap clone with authapp ROLE. Deploy before workflows, escalations and comm templates that route to the role.
+
   # ── Layer 1 ──────────────────────────────────────────────────────────────
   - id: object
     label: Objects & attributes (Database Configuration)
