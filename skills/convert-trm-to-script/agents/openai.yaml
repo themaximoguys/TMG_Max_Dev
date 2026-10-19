@@ -1,0 +1,4 @@
+interface:
+  display_name: "Convert Trm To Script"
+  short_description: "Convert TRM rules to Maximo Jython scripts"
+  default_prompt: "Use $convert-trm-to-script to complete this Maximo development task following the repository standards."

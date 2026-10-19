@@ -18,7 +18,7 @@ Convert a TRM rule or XML-based business rule into a Maximo automation script th
 
 1. `docs/standards/TMG_AUTOSCRIPT_STANDARDS.md`
 2. `docs/autoscript/TRM_TO_PYTHON.md`
-3. `CLAUDE.md`
+3. `AGENTS.md`
 4. Existing converted examples under `catalog/samples/trm_converted/`
 
 ## Required Inputs

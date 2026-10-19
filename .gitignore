@@ -14,3 +14,14 @@ __pycache__/
 .DS_Store
 .idea/
 .claude/skills/*-workspace/
+
+# local agent state and credentials (shared instructions remain tracked)
+.env
+.env.*
+!.env.example
+.claude/settings.local.json
+.codex/auth.json
+.codex/history.jsonl
+.codex/sessions/
+.gemini/settings.json
+.vscode/mcp.json

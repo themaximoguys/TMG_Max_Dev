@@ -133,9 +133,6 @@ class IbmMcpClient:
 
 
 def is_read_only(tool: dict) -> bool:
-    """Honour MCP tool annotations; fall back to name heuristics."""
+    """Only an explicit boolean read-only annotation permits an unapproved call."""
     ann = tool.get("annotations") or {}
-    if "readOnlyHint" in ann:
-        return bool(ann["readOnlyHint"])
-    n = tool.get("name", "").lower()
-    return n.startswith(("get", "list", "query", "search", "read", "describe", "find"))
+    return isinstance(ann, dict) and ann.get("readOnlyHint") is True

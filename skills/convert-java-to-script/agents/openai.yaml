@@ -1,0 +1,4 @@
+interface:
+  display_name: "Convert Java To Script"
+  short_description: "Convert Maximo Java customizations to Jython"
+  default_prompt: "Use $convert-java-to-script to complete this Maximo development task following the repository standards."

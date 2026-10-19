@@ -62,3 +62,5 @@ For any output format, include:
 2. **Upload order** — subprocesses first, parent last
 3. **Test scenarios** — happy path + rejection path minimum
 4. **Activation steps** — validate → enable → activate → auto-initiate
+
+Save generated JSON under `src/13-workflows/` and use `Workflows/Deploy.md` for the repository deployment process. Activation steps are a manual plan, not automatic execution.

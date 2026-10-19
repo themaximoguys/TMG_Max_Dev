@@ -2,13 +2,10 @@
   "mcpServers": {
     "tmg-maximo-dev": {
       "command": "python3",
-      "args": ["-m", "maxdev.mcp_server"],
-      "env": { "MAXIMO_ENV": "dev" }
-    },
-    "ibm-maximo-mcp": {
-      "type": "http",
-      "url": "${MAXIMO_MCP_URL:-https://set-MAXIMO_MCP_URL.invalid/mcp}",
-      "headers": { "apikey": "${MAXIMO_API_KEY:-}" }
+      "args": [
+        "-m",
+        "maxdev.mcp_server"
+      ]
     }
   }
 }

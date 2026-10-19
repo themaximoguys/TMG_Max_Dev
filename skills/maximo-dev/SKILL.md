@@ -18,7 +18,7 @@ Each step exists for a reason:
 
 - **Dry run, then ask.** A deploy without `--apply` (MCP: `apply=false`) shows exactly what would be created, updated or merged. Show that plan and wait for a clear yes before applying, because the user may share the environment with others.
 - **Only the environment the user named.** `MAXIMO_PROTECTED=true` environments refuse writes on purpose. The user controls that flag; don't edit `environments/.env.*` yourself.
-- **Change files, not live records.** Edit under `src/`, then deploy. The `query` / `call_script` tools are for reading and investigating.
+- **Change files, not live records.** Edit under `src/`, then deploy. Use `query` for investigation. Arbitrary `call_script` handlers can mutate records, even with GET; dry run and approval are required.
 - **Filtered extracts.** Pass names, `--like TMG`, `--where` or `--limit`. A whole-type pull of OOTB data is thousands of IBM records nobody wants in Git; maxdev refuses it without a filter.
 - **App Designer merges.** Deploy backs up the live screen and merges the repo copy onto it, so UI-made changes survive. Use `--force-replace` only when the user explicitly wants the live screen overwritten.
 - **No demo/seed data loads** unless asked.
@@ -57,5 +57,5 @@ On MAS 9, `mxe.int.enableosauth=1` means an object structure only works over RES
 ## Workflows, Database Configuration, IBM MCP
 
 - **Workflows.** Generate with the `maximo-workflow` skill and save under `src/13-workflows/`. Person groups, roles and actions go in their own folders, and the manifest deploys them together.
-- **Database Configuration.** After deploying `object` changes, run `maxdev dbconfig status`. Structural changes need Admin Mode, which logs users out, so ask before `dbconfig apply --admin`.
+- **Database Configuration.** After deploying `object` changes, run `maxdev dbconfig status`. Structural changes need Admin Mode, which logs users out, so ask before `dbconfig apply --admin --apply`.
 - **IBM MCP server (MAS 9.2, partial feature set).** Use `maxdev ibm-mcp tools --env X` or `ibm_mcp_tools` / `ibm_mcp_call`. Tools that aren't marked read-only need `apply`. Treat results as something to verify.

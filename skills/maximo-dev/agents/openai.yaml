@@ -1,0 +1,4 @@
+interface:
+  display_name: "Maximo Dev"
+  short_description: "Develop Maximo artifacts safely with maxdev"
+  default_prompt: "Use $maximo-dev to complete this Maximo development task following the repository standards."

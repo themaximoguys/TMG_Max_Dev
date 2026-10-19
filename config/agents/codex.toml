@@ -1,0 +1,6 @@
+# Launch Codex from the repository root with this Python environment activated.
+# Copy to .codex/config.toml; trust remains a user decision.
+[mcp_servers.tmg-maximo-dev]
+command = "python3"
+args = ["-m", "maxdev.mcp_server"]
+startup_timeout_sec = 30

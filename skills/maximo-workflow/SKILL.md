@@ -1,11 +1,19 @@
 ---
-name: MaximoWorkflow
+name: maximo-workflow
 description: IBM Maximo workflow generator with API deployment. Converts business process descriptions into deployable Maximo workflows — generates OSLC JSON for API upload, step-by-step UI build guides, or MIF XML. Handles full dependency chain (person groups → roles → actions → subprocesses → parent). USE WHEN Maximo workflow, build workflow, create workflow, deploy workflow, workflow designer, approval workflow, routing workflow, Maximo process automation, workflow JSON, workflow XML, OSLC workflow, mxapiwfprocess, WOAPPR, POAPPR, work order approval, PO approval, status routing, escalation workflow, Maximo no-code workflow, workflow configuration, workflow deployment, upload workflow, push workflow to Maximo.
 ---
 
 # MaximoWorkflow
 
 Generate and deploy IBM Maximo workflows from natural language. Three output modes: OSLC JSON (API deployment), UI build guide, or MIF XML import.
+
+## Repository contract
+
+Read `AGENTS.md` and `skills/maximo-dev/SKILL.md` first. Save workflow JSON under
+`src/13-workflows/`; save person groups, roles and actions in their registered
+folders. Use maxdev for all tenant access, with a named environment, dry run,
+and approval before apply. API examples in references explain payload shapes;
+they are not permission to use direct HTTP deployment or deletion.
 
 ## Workflow Routing
 
@@ -22,7 +30,7 @@ Generate and deploy IBM Maximo workflows from natural language. Three output mod
 ## Quick Reference
 
 - **OSLC endpoint**: `POST /maximo/oslc/os/mxapiwfprocess?lean=1`
-- **Auth**: `maxauth: <base64(user:pass)>` — always include `?lean=1`
+- **Connection**: maxdev resolves the user-managed environment; never assemble credentials in shell commands.
 - **Coordinates**: Grid units (-10 to +15), NOT pixels
 - **Dependency order**: Person Groups → MAXROLE → Subprocesses → Parent
 - **INPUT nodes**: Each choice must route to a SEPARATE TASK node with its own role

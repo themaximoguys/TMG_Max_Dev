@@ -1,5 +1,8 @@
 # Maximo Workflow OSLC API Deployment
 
+> Repository use: payload reference only. Follow `Workflows/Deploy.md` and use
+> maxdev with dry run and approval. Do not execute the direct HTTP examples below.
+
 Reference for deploying workflows programmatically via Maximo OSLC REST API using JSON format. Tested and verified on Maximo 7.6.x and MAS 9.x.
 
 ---

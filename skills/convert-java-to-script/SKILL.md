@@ -18,7 +18,7 @@ Convert a Java customization into a Maximo automation script that matches TMG st
 
 1. `docs/standards/TMG_AUTOSCRIPT_STANDARDS.md`
 2. `docs/autoscript/JAVA_TO_PYTHON.md`
-3. `CLAUDE.md`
+3. `AGENTS.md`
 4. Existing scripts for the same object or business area
 
 ## Required Inputs

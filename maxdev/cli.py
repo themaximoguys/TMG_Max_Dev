@@ -8,13 +8,13 @@
   maxdev extract  TYPE [NAME ...] [--like TMG] [--where ...] [--limit N]
   maxdev diff     TYPE [NAME ...] | --path P  repo vs live
   maxdev deploy   TYPE [NAME ...] | --path P | --manifest M   [--apply] [--force-replace]
-  maxdev dbconfig status | apply [--admin]
-  maxdev adminmode state | on | off
+  maxdev dbconfig status | apply [--admin] [--apply]
+  maxdev adminmode state | on | off [--apply]
   maxdev query    OS [--where W] [--select S] [--limit N]
   maxdev schema   OS                          JSON schema of an object structure
-  maxdev script   NAME [--param k=v] [--body JSON]   call an automation-script REST handler
+  maxdev script   NAME [--param k=v] [--body JSON] [--apply]   plan/call a script handler
   maxdev data     export OS --where W --out F | load OS FILE --key k1,k2 [--apply]
-  maxdev dm       create PKGDEF | download PKGDEF ID OUT | upload ZIP | deploy [--complete]
+  maxdev dm       create PKGDEF | download PKGDEF ID OUT | upload ZIP | deploy [--complete]  (writes need --apply)
   maxdev templates                            TMG script templates (catalog/templates)
   maxdev build    KIND --object O [--attr A] [--name N] [--logging service]   new script from a TMG template
   maxdev lint     [PATH ...]                  TMG standards check (default: all scripts in src/)
@@ -24,7 +24,7 @@
                                               2) deploy TMG structures only where none is REST-usable
   maxdev ibm-mcp  info | tools | call NAME [--args JSON] [--apply]   IBM MAS 9.2 MCP server
 
-Deploy is a dry run unless --apply is given. Environments marked
+Writes are dry runs unless --apply is given. Environments marked
 MAXIMO_PROTECTED=true refuse every write.
 """
 from __future__ import annotations
@@ -82,13 +82,16 @@ def main(argv=None) -> int:
             x.add_argument("--full", action="store_true", help="compare every live field, not just those in the repo file")
 
     x = sub.add_parser("dbconfig"); x.add_argument("action", choices=["status", "apply"]); x.add_argument("--admin", action="store_true")
+    x.add_argument("--apply", action="store_true", help="execute configuration changes (default: dry run)")
     x = sub.add_parser("adminmode"); x.add_argument("action", choices=["state", "on", "off"])
+    x.add_argument("--apply", action="store_true", help="change Admin Mode (default: dry run)")
 
     x = sub.add_parser("query"); x.add_argument("os"); x.add_argument("--where", default="")
     x.add_argument("--select", default="*"); x.add_argument("--limit", type=int, default=20)
     x = sub.add_parser("schema"); x.add_argument("os")
     x = sub.add_parser("script"); x.add_argument("name"); x.add_argument("--param", action="append", default=[])
     x.add_argument("--body"); x.add_argument("--get", action="store_true")
+    x.add_argument("--apply", action="store_true", help="invoke the script, including GET handlers (default: dry run)")
 
     x = sub.add_parser("data"); ds = x.add_subparsers(dest="dcmd", required=True)
     y = ds.add_parser("export"); y.add_argument("os"); y.add_argument("--where", default=""); y.add_argument("--select", default="*")
@@ -98,9 +101,12 @@ def main(argv=None) -> int:
 
     x = sub.add_parser("dm"); dm = x.add_subparsers(dest="dcmd", required=True)
     y = dm.add_parser("create"); y.add_argument("pkgdef"); y.add_argument("--readme", default="")
+    y.add_argument("--apply", action="store_true")
     y = dm.add_parser("download"); y.add_argument("pkgdef"); y.add_argument("id"); y.add_argument("out")
     y = dm.add_parser("upload"); y.add_argument("zip")
+    y.add_argument("--apply", action="store_true")
     y = dm.add_parser("deploy"); y.add_argument("--complete", action="store_true")
+    y.add_argument("--apply", action="store_true")
 
     x = sub.add_parser("new"); x.add_argument("kind", choices=["autoscript"]); x.add_argument("name")
     x.add_argument("--type", default="library", choices=sorted(scaffold.LP_TYPES))
@@ -166,6 +172,18 @@ def main(argv=None) -> int:
             print(f"created {path.relative_to(REPO)}"); return 0
 
         s = engine.Session(a.env)
+        # Match MCP's dry-run contract for every imperative write command.
+        # GET script handlers can mutate too; the HTTP verb is not a safety signal.
+        writes = (a.cmd == "script" or
+                  (a.cmd == "dbconfig" and a.action == "apply") or
+                  (a.cmd == "adminmode" and a.action != "state") or
+                  (a.cmd == "dm" and a.dcmd != "download"))
+        if writes:
+            if not a.apply:
+                _print({"mode": "DRY-RUN", "env": s.env,
+                        "command": {k: v for k, v in vars(a).items() if k != "apply"}})
+                return 0
+            s.guard_write()
         if a.cmd == "ping":
             who = s.client.whoami()
             _print({"env": s.env, "base_url": s.target.base_url, "protected": s.protected,
@@ -263,6 +281,7 @@ def main(argv=None) -> int:
             for row in r["results"]:
                 print(f"  {row['action']:<15}{row['file']}  {row.get('error', '')}")
             print(r["summary"])
+            return 1 if r["summary"].get("FAILED") else 0
         return 0
     except (KeyError, ValueError, FileNotFoundError, PermissionError) as e:
         print(f"error: {e}", file=sys.stderr)

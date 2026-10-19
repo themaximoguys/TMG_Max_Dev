@@ -19,8 +19,8 @@ Create a new Maximo MAS 9 automation script that matches TMG standards and exist
 ## Read First
 
 1. `docs/standards/TMG_AUTOSCRIPT_STANDARDS.md`
-2. `CLAUDE.md`
-3. Relevant examples under `catalog/samples/` or `PROJECT/integration_scripts/`
+2. `AGENTS.md`
+3. Relevant examples under `catalog/samples/`
 
 ## Required Inputs
 
@@ -41,7 +41,7 @@ Create a new Maximo MAS 9 automation script that matches TMG standards and exist
    If an object event script already exists for the same MBO and event, add the new rule to that file instead of creating a duplicate script.
 
 3. Choose the canonical name.
-   Follow `TMG_AUTOSCRIPT_STANDARDS.md` exactly for filename, autoscript, and launch point naming.
+   Follow `docs/standards/TMG_AUTOSCRIPT_STANDARDS.md` exactly for filename, autoscript, and launch point naming.
 
 4. Select one logging style.
    Use either `MXLoggerFactory` or the implicit `service` variable for the entire script.

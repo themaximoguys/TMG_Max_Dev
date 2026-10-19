@@ -1,12 +1,12 @@
-"""MCP server: the same engine as the CLI, exposed as tools for Claude / any MCP client.
+"""MCP server: the same engine as the CLI, exposed to any MCP client.
 
 Run:   python -m maxdev.mcp_server          (stdio)
-Claude Code registration is in .mcp.json at the repo root.
+Client setup and registrations are described in docs/AGENT_SETUP.md.
 
-Safety model (the agent cannot bypass it):
+Safety model for tools exposed by this server:
   * every write tool takes apply=False by default and returns a dry-run plan
   * environments with MAXIMO_PROTECTED=true refuse writes inside the engine
-  * deploy only sends files that are in the Git working tree — the agent edits
+  * deploy resolves artifacts from registered source folders — the agent edits
     files, a human reviews the diff, then deploy applies them
 """
 from __future__ import annotations

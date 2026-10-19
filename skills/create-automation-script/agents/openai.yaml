@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create Automation Script"
+  short_description: "Create TMG Maximo automation scripts"
+  default_prompt: "Use $create-automation-script to complete this Maximo development task following the repository standards."

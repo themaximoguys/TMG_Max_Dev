@@ -1,0 +1,4 @@
+interface:
+  display_name: "Maximo Workflow"
+  short_description: "Build Maximo workflows and dependency plans"
+  default_prompt: "Use $maximo-workflow to complete this Maximo development task following the repository standards."
