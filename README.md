@@ -97,3 +97,13 @@ The engine, formats and safety rules are tested offline (run the test command fo
 - The IBM MCP server route.
 
 The reference repo verified the `ok` names on a MAS 9 tenant.
+
+## License
+
+Copyright (c) 2026 TheMaximoGuys LLC. All rights reserved. This is proprietary
+software, licensed only under a signed agreement with TheMaximoGuys LLC; see
+[LICENSE](LICENSE). The bundled `catalog/` is MIT-licensed; third-party notices
+are in [NOTICE](NOTICE).
+
+IBM, Maximo and IBM Maximo Application Suite are trademarks of IBM. This product
+is not affiliated with or endorsed by IBM and contains no IBM code.

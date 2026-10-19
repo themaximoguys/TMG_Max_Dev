@@ -1,0 +1,39 @@
+TheMaximoGuys LLC Proprietary Software License
+
+Copyright (c) 2026 TheMaximoGuys LLC. All rights reserved.
+
+This software, including the maxdev command-line tool, the tmg-maximo-dev MCP
+server, agent skills, templates, standards and documentation (the "Software"),
+is the confidential and proprietary property of TheMaximoGuys LLC.
+
+1. No license is granted except under a written license agreement, order form
+   or statement of work signed by TheMaximoGuys LLC ("Agreement"). Use is
+   limited to the scope, term, environments and users stated in that Agreement.
+
+2. Without an Agreement you may not use, copy, modify, merge, publish,
+   distribute, sublicense, sell, rent, lease, or create derivative works of the
+   Software, or reverse engineer, decompile or disassemble it, except to the
+   extent applicable law expressly permits despite this restriction.
+
+3. The Software is Confidential Information of TheMaximoGuys LLC. You must not
+   disclose it to any third party except as the Agreement permits.
+
+4. All right, title and interest in the Software, including all intellectual
+   property rights and any improvements, remain with TheMaximoGuys LLC.
+   Configuration, scripts and data that a licensee extracts from or authors for
+   its own Maximo environments using the Software remain the licensee's.
+
+5. Third-party components are licensed under their own terms, listed in NOTICE.
+   Those terms govern those components and are not restricted by this license.
+
+6. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, EXCEPT AS EXPRESSLY STATED IN THE AGREEMENT. TO THE MAXIMUM EXTENT
+   PERMITTED BY LAW, THEMAXIMOGUYS LLC SHALL NOT BE LIABLE FOR ANY INDIRECT,
+   INCIDENTAL, SPECIAL OR CONSEQUENTIAL DAMAGES ARISING FROM USE OF THE SOFTWARE.
+
+IBM, Maximo and IBM Maximo Application Suite are trademarks of International
+Business Machines Corporation. TheMaximoGuys LLC is not affiliated with or
+endorsed by IBM. The Software works with a customer's separately licensed IBM
+Maximo Application Suite through its documented APIs and includes no IBM code.
+
+Licensing enquiries: hello@themaximoguys.ai

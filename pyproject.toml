@@ -3,6 +3,9 @@ name = "tmg-maxdev"
 version = "0.1.0"
 description = "TMG Maximo/MAS development: config-as-code extract, diff and deploy via the Manage REST API, plus an MCP server"
 requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "TheMaximoGuys LLC", email = "hello@themaximoguys.ai" }]
+classifiers = ["License :: Other/Proprietary License", "Private :: Do Not Upload"]
 dependencies = ["requests>=2.31", "PyYAML>=6.0", "mcp>=1.2"]
 
 [project.scripts]

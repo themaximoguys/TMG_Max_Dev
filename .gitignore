@@ -25,3 +25,11 @@ __pycache__/
 .codex/sessions/
 .gemini/settings.json
 .vscode/mcp.json
+
+# product repo: environment extracts (IBM OOTB / client config) are never committed.
+# Only TMG-authored predeployment artifacts and folder placeholders are tracked.
+src/**
+!src/**/
+!src/**/.gitkeep
+!src/00_predeployment/**
+!src/09-automation-scripts/library/TMG_*.py

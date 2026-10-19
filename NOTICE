@@ -1,0 +1,23 @@
+TMG Maximo Development (maxdev)
+Copyright (c) 2026 TheMaximoGuys LLC. All rights reserved.
+Proprietary; see LICENSE.
+
+This product includes or depends on the following separately licensed
+components. Their licenses apply to those components only.
+
+Bundled
+-------
+catalog/  TMG_MAX_CODE automation-script reference catalog
+          Copyright (c) 2026 TheMaximoGuys. MIT License (catalog/LICENSE-TMG_MAX_CODE).
+          Also published at github.com/themaximoguys/Max_autoscripts.
+
+Runtime dependencies (installed separately, not redistributed)
+--------------------------------------------------------------
+requests   Apache License 2.0
+PyYAML     MIT License
+mcp        MIT License (Model Context Protocol Python SDK)
+
+Trademarks
+----------
+IBM, Maximo and IBM Maximo Application Suite are trademarks of International
+Business Machines Corporation. No IBM code is included in this product.
