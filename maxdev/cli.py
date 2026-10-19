@@ -1,6 +1,7 @@
 """maxdev — Maximo development from the command line.
 
   maxdev envs                                 list configured environments
+  maxdev license                              licence status (no Maximo access needed)
   maxdev ping     [--env dev]                 who am I, is the API reachable
   maxdev doctor   [--env dev]                 which object structures exist for every type
   maxdev types                                registry: every Maximo area and how it is handled
@@ -24,6 +25,7 @@
                                               2) deploy TMG structures only where none is REST-usable
   maxdev ibm-mcp  info | tools | call NAME [--args JSON] [--apply]   IBM MAS 9.2 MCP server
 
+Connecting to Maximo needs a TheMaximoGuys licence key (see maxdev/license.py).
 Writes are dry runs unless --apply is given. Environments marked
 MAXIMO_PROTECTED=true refuse every write.
 """
@@ -34,7 +36,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import admin, bootstrap_gen, builder, data, engine, ibm_mcp, manifest, registry, scaffold, store
+from . import admin, bootstrap_gen, builder, data, engine, ibm_mcp, license, manifest, registry, scaffold, store
 from .env import REPO, list_envs
 
 
@@ -61,6 +63,7 @@ def main(argv=None) -> int:
     sub.add_parser = lambda *a_, **k: _add(*a_, parents=[common], **k)
 
     sub.add_parser("envs")
+    sub.add_parser("license")
     sub.add_parser("ping")
     sub.add_parser("doctor")
     sub.add_parser("types")
@@ -130,6 +133,9 @@ def main(argv=None) -> int:
     try:
         if a.cmd == "envs":
             _print(list_envs()); return 0
+        if a.cmd == "license":
+            st = license.status(); _print(st)
+            return 0 if st["state"] in ("valid", "grace") else 1
         if a.cmd == "types":
             layers, _ = registry.load()
             for t in registry.ordered():

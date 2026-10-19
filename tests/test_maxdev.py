@@ -10,6 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import license_fixture  # noqa: E402,F401
 from fake_maximo import FakeMaximo, Resp  # noqa: E402
 
 from maxdev import appxml, engine, ibm_mcp, registry, store  # noqa: E402

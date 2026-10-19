@@ -16,7 +16,7 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
-from . import admin, builder, data, engine, ibm_mcp, manifest, registry, scaffold, store
+from . import admin, builder, data, engine, ibm_mcp, license, manifest, registry, scaffold, store
 from .env import REPO, list_envs
 
 mcp = FastMCP("tmg-maximo-dev")
@@ -38,6 +38,12 @@ def _ok(obj) -> str:
 def list_environments() -> str:
     """Environments configured in environments/.env.<name>."""
     return _ok(list_envs())
+
+
+@mcp.tool()
+def license_status() -> str:
+    """maxdev licence: licensee, expiry, licensed Maximo hosts. Maximo tools need a valid licence."""
+    return _ok(license.status())
 
 
 @mcp.tool()

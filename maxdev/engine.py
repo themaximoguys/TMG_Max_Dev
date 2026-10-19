@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 
 from . import appxml as ax
-from . import registry, store
+from . import license, registry, store
 from .client import MaximoClient, MaximoError, strip_meta
 from .env import REPO, is_protected, load_env
 
@@ -25,6 +25,7 @@ class Session:
     def __init__(self, env: str | None = None, client: MaximoClient | None = None):
         self.target, self.vals = load_env(env)
         self.env = self.target.name
+        license.require(self.target.base_url)
         self.client = client or MaximoClient(self.target)
         self.protected = is_protected(self.vals)
 

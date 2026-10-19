@@ -6,7 +6,7 @@ requires-python = ">=3.10"
 license = { file = "LICENSE" }
 authors = [{ name = "TheMaximoGuys LLC", email = "hello@themaximoguys.ai" }]
 classifiers = ["License :: Other/Proprietary License", "Private :: Do Not Upload"]
-dependencies = ["requests>=2.31", "PyYAML>=6.0", "mcp>=1.2"]
+dependencies = ["requests>=2.31", "PyYAML>=6.0", "mcp>=1.2", "cryptography>=41"]
 
 [project.scripts]
 maxdev = "maxdev.cli:main"

@@ -16,6 +16,7 @@ Runtime dependencies (installed separately, not redistributed)
 requests   Apache License 2.0
 PyYAML     MIT License
 mcp        MIT License (Model Context Protocol Python SDK)
+cryptography  Apache License 2.0 or BSD 3-Clause (dual licensed)
 
 Trademarks
 ----------

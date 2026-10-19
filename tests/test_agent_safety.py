@@ -5,6 +5,7 @@ import json
 import unittest
 from unittest.mock import MagicMock, patch
 
+import license_fixture  # noqa: F401
 from maxdev import cli, ibm_mcp, mcp_server
 
 
