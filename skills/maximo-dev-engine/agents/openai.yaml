@@ -1,0 +1,4 @@
+interface:
+  display_name: "Maximo Dev Engine"
+  short_description: "Run a Maximo work package through gates with specialist agents"
+  default_prompt: "Use $maximo-dev-engine to run this Maximo development work package through the gate ladder."

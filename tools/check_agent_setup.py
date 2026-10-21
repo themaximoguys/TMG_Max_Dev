@@ -16,7 +16,7 @@ def check(root=ROOT):
             errors.append(message)
 
     expected = {"maximo-dev", "create-automation-script", "convert-java-to-script",
-                "convert-trm-to-script", "maximo-workflow"}
+                "convert-trm-to-script", "maximo-workflow", "maximo-dev-engine"}
     skills = root / "skills"
     require({p.relative_to(skills).as_posix() for p in skills.rglob("SKILL.md")} ==
             {f"{name}/SKILL.md" for name in expected},
@@ -79,5 +79,5 @@ if __name__ == "__main__":
     for problem in problems:
         print(f"ERROR: {problem}", file=sys.stderr)
     if not problems:
-        print("Agent setup OK: 5 shared skills, discovery trees, client entry points, and MCP defaults")
+        print("Agent setup OK: 6 shared skills, discovery trees, client entry points, and MCP defaults")
     sys.exit(bool(problems))

@@ -1,0 +1,111 @@
+# The OWNER primitive, machine-readable. engine/02_AGENT_ROSTER.md is the narrative;
+# tools/check_components.py and tools/validate_work.py read this file.
+#
+#   agents.<name>.registers  work-package registers (engine/templates/) the agent owns
+#   agents.<name>.types      maxdev registry type ids whose src/ files the agent builds
+#   agents.<name>.gates      lifecycle gates (engine/01_LIFECYCLE.md) the agent clears
+#
+# Every registry type and every template has exactly one owner. Functional and technical rows of
+# SOLUTION_CLASSIFICATION.md are split by Req ID prefix (see 02_AGENT_ROSTER.md); the technical
+# architect owns the register's integrity.
+agents:
+  # ── run the work package ──────────────────────────────────────────────────
+  work-package-manager:
+    registers: [WORK_CHECKLIST.md, ASSUMPTION_RISK_REGISTER.md]
+    types: []
+    gates: [D0, D10]
+  requirements-analyst:
+    registers: [SOURCE_REGISTER.md, REQUIREMENT_REGISTER.md]
+    types: []
+    gates: [D1]
+
+  # ── embedded functional + technical design ────────────────────────────────
+  maximo-functional-architect:
+    registers: []
+    types: []
+    gates: [D3]
+  maximo-technical-architect:
+    registers: [CURRENT_STATE_INVENTORY.md, SOLUTION_CLASSIFICATION.md, ARTIFACT_REGISTER.md]
+    types: []
+    gates: [D2, D3]
+  integration-architect:
+    registers: [INTEGRATION_REGISTER.md]
+    types: [objectstructure, publishchannel, enterpriseservice, invocationchannel, endpoint,
+            extsystem, ifacecontrol, jsonmapping]
+    gates: [D3, D4]
+  gis-esri-specialist:
+    registers: [GIS_REGISTER.md]
+    types: []
+    gates: [D3, D4]
+  ai-orchestrate-specialist:
+    registers: [AI_AGENT_REGISTER.md]
+    types: []
+    gates: [D3, D4]
+  security-architect:
+    registers: [SECURITY_REGISTER.md]
+    types: [securitygroup, sigoption, grant, datarestriction]
+    gates: [D3, D4]
+  environment-steward:
+    registers: [ENVIRONMENT_READINESS.md]
+    types: []
+    gates: [D2]
+  maximo-api-researcher:
+    registers: [RESEARCH_REGISTER.md]
+    types: []
+    gates: []
+
+  # ── build ─────────────────────────────────────────────────────────────────
+  configuration-developer:
+    registers: []
+    types: [property, domain, message, object, relationship, lookupmap, condition, formula, objformula]
+    gates: [D4]
+  app-designer-developer:
+    registers: []
+    types: [appxml, appdesc, condprop, query, startcenter]
+    gates: [D4]
+  automation-script-developer:
+    registers: []
+    types: [autoscript]
+    gates: [D4]
+  legacy-conversion-specialist:
+    registers: [CONVERSION_REGISTER.md]
+    types: [java]
+    gates: [D2, D4]
+  workflow-developer:
+    registers: []
+    types: [persongroup, role, action, escalation, crontask, workflow, commtemplate]
+    gates: [D4]
+  mobile-specialist:
+    registers: []
+    types: [mafapp, inspectionform]
+    gates: [D4]
+  service-management-specialist:
+    registers: []
+    types: [classification, sla, responseplan]
+    gates: [D4]
+  reporting-analytics-specialist:
+    registers: []
+    types: [report, kpi]
+    gates: [D4]
+  data-migration-lead:
+    registers: [DATA_LOAD_REGISTER.md]
+    types: [dataload]
+    gates: [D4]
+
+  # ── ship and prove ────────────────────────────────────────────────────────
+  release-manager:
+    registers: [DEPLOYMENT_PLAN.md]
+    types: []
+    gates: [D6, D7, D8]
+  test-engineer:
+    registers: [TEST_REGISTER.md]
+    types: []
+    gates: [D9]
+  dev-red-team-reviewer:
+    registers: [FINDINGS_LOG.md]
+    types: []
+    gates: [D5]
+  technical-writer:
+    registers: [DESIGN_DOC.md, HANDOFF.md]
+    types: []
+    gates: [D10]
