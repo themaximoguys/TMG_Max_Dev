@@ -1,7 +1,7 @@
 # TMG_Max_Dev — shared coding-agent instructions
 
 This guide applies to every coding agent working in this repository. Read
-`skills/maximo-dev/SKILL.md` first. Paths in this guide are relative to the repository
+`INTENT.md` for why the repo exists, then `skills/maximo-dev/SKILL.md`. Paths in this guide are relative to the repository
 root; skill-local references are relative to that skill's directory.
 
 ## Repository and runtime
