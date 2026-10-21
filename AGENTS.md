@@ -60,6 +60,9 @@ Reference material is TMG-only: do not introduce client names or third-party ass
 - Engine/CLI/MCP changes: `python3 -m unittest discover -s tests`.
 - Scripts: `python3 -m maxdev lint` (or pass changed script paths); no lint errors.
 - Agent setup: `python3 tools/check_agent_setup.py`.
+- Components: `python3 tools/check_components.py` (registry folders, predeployment, standards).
+- Git hooks in `.githooks/` run these checks on commit/push once enabled with
+  `git config core.hooksPath .githooks`; Claude Code hooks are in `.claude/settings.json`.
 - Review `git diff --check` and the diff; report checks run, failures, and any
   unverified live behavior. Do not claim a tenant test from an offline test.
 - Keep vendor entry files as small pointers to this guide. Setup and MCP examples:

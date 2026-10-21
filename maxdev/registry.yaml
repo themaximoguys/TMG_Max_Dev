@@ -196,6 +196,18 @@ types:
     handler: replace
     note: MERGE does not update a formula row; the replace handler deletes then POSTs with rollback.
 
+  - id: objformula
+    label: Object formulas (named, reusable)
+    layer: 2
+    os: MXAPIOBJFORMULA
+    key: [objectname, formulaname]
+    folder: 08-formulas/object
+    name: [objectname, formulaname]
+    handler: replace
+    select: "objectname,formulaname,description,formula,validateformula,objectformulacond{*}"
+    status: verify
+    note: IBM MXAPIOBJFORMULA (authapp MXAPIOBJFORMULA) reads over REST on demo; no TMG clone needed. Replaced whole like attribute formulas; write path not yet proven live. Deploy before attribute formulas that call it.
+
   - id: condprop
     label: Conditional UI (CTRLGROUP/CTRLCONDITION/CTRLCONDPROP)
     layer: 2

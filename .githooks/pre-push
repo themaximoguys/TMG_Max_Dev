@@ -1,0 +1,9 @@
+#!/bin/sh
+# Full offline validation before anything leaves this clone. Never contacts Maximo.
+set -e
+cd "$(git rev-parse --show-toplevel)"
+PY=${PYTHON:-python3}
+"$PY" tools/check_agent_setup.py
+"$PY" tools/check_components.py
+"$PY" -m unittest discover -s tests -q
+"$PY" -m maxdev lint

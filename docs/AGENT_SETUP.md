@@ -98,6 +98,23 @@ IBM MCP tools need a boolean `readOnlyHint: true` annotation to be called withou
 
 For audit findings, validation results, and migration notes, see [AGENT_AUDIT.md](AGENT_AUDIT.md).
 
+## Hooks
+
+Enable the offline git hooks once per clone (they never contact Maximo):
+
+```bash
+git config core.hooksPath .githooks
+```
+
+- `pre-commit`: `git diff --check`, `check_agent_setup.py`, `check_components.py`,
+  `maxdev lint` on staged scripts, unit tests when `maxdev/`, `tests/` or `tools/` change.
+- `pre-push`: setup and component checks, all unit tests, lint of every script.
+
+Claude Code also loads `.claude/settings.json` (`tools/agent_hook.py`): at session start it
+runs both checkers, before tool use it refuses reading/editing `environments/.env.*` and raw
+`curl`/`Invoke-RestMethod` writes to `/maximo/`, and after an edit under `src/` it lints the
+script and returns errors to the agent. Other clients rely on the git hooks.
+
 ## Maintenance and references
 
 Run `python3 tools/check_agent_setup.py` after changing skills or adapters. It
