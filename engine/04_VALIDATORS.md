@@ -31,6 +31,7 @@
 | `W-14` | Every file the manifest resolves is in the artifact register (no unregistered change) | Manifest ↔ Artifact |
 | `W-15` | Script artifacts pass `maxdev lint` with 0 errors | Artifact ↔ TMG standards |
 | `W-16` | Change kind uses a §3 value; `RETIRE` rows cite the user's approval | Artifact |
+| `W-17` | Every deployable artifact file is tracked by git (`tools/track_work.py <TICKET>`; `src/**` is otherwise ignored) | Artifact ↔ git index |
 
 ## 3. Delivery evidence (computed)
 

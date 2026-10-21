@@ -112,6 +112,8 @@ and computed validators. Start with `skills/maximo-dev-engine/SKILL.md`.
   clients read the matching file and play that role.
 - `python3 tools/new_work.py TICKET --env ENV` scaffolds `work/TICKET/` and the manifest;
   `python3 tools/validate_work.py TICKET` runs W-01–W-28.
+- `src/**` stays ignored so environment extracts never reach git; `python3 tools/track_work.py
+  TICKET` force-adds exactly the files a work package's manifest names (validator W-17).
 
 ## Hooks
 

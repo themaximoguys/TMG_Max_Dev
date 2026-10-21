@@ -56,6 +56,22 @@ def split(cell: str) -> list[str]:
     return [x.strip() for x in re.split(r"[,;\s]+", cell or "") if x.strip()]
 
 
+def _untracked(root: Path, paths: list[Path]) -> list[Path] | None:
+    """Files not in the git index (staged or committed); None when root is not a git work tree."""
+    import subprocess
+    if not paths:
+        return []
+    import os
+    # Inside a git hook GIT_DIR/GIT_INDEX_FILE point at the hook's repo; resolve from root instead.
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    p = subprocess.run(["git", "ls-files", "--", *[str(x) for x in paths]], cwd=root,
+                       capture_output=True, text=True, env=env)
+    if p.returncode:
+        return None
+    tracked = {(root / line).resolve() for line in p.stdout.splitlines()}
+    return [x for x in paths if x.resolve() not in tracked]
+
+
 def validate(ticket: str, root: Path = ROOT) -> list[dict]:
     from maxdev import builder, manifest, registry
 
@@ -160,6 +176,10 @@ def validate(ticket: str, root: Path = ROOT) -> list[dict]:
                                for f in sorted(resolved) if f not in files])
     result("W-15", [a for a in deployable if a.get("Type") == "autoscript"], p15)
     result("W-16", arts, p16)
+    untracked = _untracked(root, list(files))
+    result("W-17", files if untracked is not None else [],
+           [f"{files[f]}: {f.relative_to(root)} not tracked by git; run tools/track_work.py {ticket}"
+            for f in untracked or []])
 
     # W-20..W-28 delivery evidence
     p20, p21, p22 = [], [], []

@@ -105,6 +105,19 @@ class EngineTests(unittest.TestCase):
             f"name: T-1\nitems:\n  - path: [{FORMULA}, src/08-formulas/object/ASSET__EXTRA.json]\n")
         self.assertEqual(self.statuses()["W-14"]["status"], "FAIL")
 
+    def test_git_tracking_check_skips_outside_a_work_tree_and_fails_untracked(self):
+        self.build_valid_package()
+        self.assertEqual(self.statuses()["W-17"]["status"], "SKIP")  # temp copy is not a git repo
+        import os
+        import subprocess
+        # Run under a pre-commit hook, GIT_* would aim these commands at the real repository.
+        env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+        with patch.dict(os.environ, env, clear=True):
+            subprocess.run(["git", "init", "-q"], cwd=self.tmp, check=True)
+            self.assertEqual(self.statuses()["W-17"]["status"], "FAIL")
+            subprocess.run(["git", "add", "-f", FORMULA], cwd=self.tmp, check=True)
+            self.assertEqual(self.statuses()["W-17"]["status"], "PASS")
+
 
 if __name__ == "__main__":
     unittest.main()

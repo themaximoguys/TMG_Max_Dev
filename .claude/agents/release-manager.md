@@ -39,8 +39,10 @@ from the `environment-steward`.
    in `WORK_CHECKLIST.md`. If either is missing, stop and say which gate is open.
 2. **Build the manifest from the artifact register.** One `items:` entry per artifact row whose
    `Change` is `NEW`, `MODIFY` or `RETIRE`; skip `NO-CHANGE` rows. Copy every manual step from the
-   design into `manual:`. Check coverage both ways (`W-13`, `W-14`):
+   design into `manual:`. Stage the artifacts so git tracks them despite the `src/**` extract
+   rule (`W-17`), then check coverage both ways (`W-13`, `W-14`):
    ```bash
+   python3 tools/track_work.py <TICKET>
    python3 tools/validate_work.py <TICKET>
    ```
 3. **Diff before anything.** Record the output as a `DRY-RUN` row:

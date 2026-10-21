@@ -27,7 +27,9 @@ __pycache__/
 .vscode/mcp.json
 
 # product repo: environment extracts (IBM OOTB / client config) are never committed.
-# Only TMG-authored predeployment artifacts and folder placeholders are tracked.
+# Only TMG-authored predeployment artifacts and folder placeholders are tracked here.
+# Work-package artifacts are tracked explicitly: `python3 tools/track_work.py TICKET`
+# force-adds the files its manifest names, and validator W-17 fails until they are.
 src/**
 !src/**/
 !src/**/.gitkeep
