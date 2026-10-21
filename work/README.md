@@ -1,5 +1,5 @@
 # work/
 
-One folder per work package, created by `python3 tools/new_work.py <TICKET> --env <ENV>`.
-Each holds the registers from `engine/templates/`, filled only by their owner agents
-(`engine/02_AGENT_ROSTER.md`). Validate with `python3 tools/validate_work.py <TICKET>`.
+One Markdown file per ticket (feature, enhancement or bug), opened with
+`python3 tools/new_work.py <TICKET> --type <type> --env <ENV>` and checked with
+`python3 tools/validate_work.py <TICKET>`. Process: `skills/maximo-dev-engine/SKILL.md`.

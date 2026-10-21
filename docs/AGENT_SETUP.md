@@ -98,22 +98,21 @@ IBM MCP tools need a boolean `readOnlyHint: true` annotation to be called withou
 
 For audit findings, validation results, and migration notes, see [AGENT_AUDIT.md](AGENT_AUDIT.md).
 
-## Development engine and subagents
+## Tickets and design subagents
 
-`engine/` turns a work package into gated, owner-filled registers, following the same model
-as the RFP engine: seven primitives, gates D0–D10, one owner per register and per artifact type,
-and computed validators. Start with `skills/maximo-dev-engine/SKILL.md`.
+Every feature, enhancement and bug fix follows one flow in `skills/maximo-dev-engine/SKILL.md`:
+intake → current state (bug: reproduce + root cause) → design → build → verify → deploy → test.
 
-- `engine/00_MASTER_PROMPT.md` (constitution) · `01_LIFECYCLE.md` (gates) · `02_AGENT_ROSTER.md`
-  (owners and cross-validation pairs) · `03_SOLUTION_TAXONOMY.md` (enums) · `04_VALIDATORS.md`.
-- `engine/roster.yaml` is the machine-readable owner table; `check_components.py` fails if a
-  registry type, template or agent file has no owner, or has more than one.
-- `.claude/agents/*.md` holds 23 specialists. Claude Code dispatches them as subagents; other
-  clients read the matching file and play that role.
-- `python3 tools/new_work.py TICKET --env ENV` scaffolds `work/TICKET/` and the manifest;
-  `python3 tools/validate_work.py TICKET` runs W-01–W-28.
+- One record per ticket: `work/<TICKET>.md` from `skills/maximo-dev-engine/TICKET_TEMPLATE.md`,
+  opened with `python3 tools/new_work.py TICKET --type feature|enhancement|bug --env ENV`.
+- Subagents are design-only and dispatched only when a requirement triggers one (integration,
+  GIS/Esri, AI/Orchestrate, security, legacy conversion, or a large functional/technical design).
+  The seven live in `.claude/agents/` and return their design as text; build, deploy and test
+  run in the main session following the repo skills.
+- `python3 tools/validate_work.py TICKET` checks the ticket against `src/`, the manifest, git and
+  the deploy log; an APPLY is not done until a later RE-DIFF says `same`.
 - `src/**` stays ignored so environment extracts never reach git; `python3 tools/track_work.py
-  TICKET` force-adds exactly the files a work package's manifest names (validator W-17).
+  TICKET` force-adds exactly the files a ticket's manifest names.
 
 ## Hooks
 

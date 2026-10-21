@@ -2,7 +2,7 @@
 
   python3 tools/track_work.py TICKET [--dry-run]
 
-Stages every file manifests/<TICKET>.yaml resolves, plus work/<TICKET>/ and the manifest itself.
+Stages every file manifests/<TICKET>.yaml resolves, plus work/<TICKET>.md and the manifest itself.
 Git keeps tracking a file once it is added, so the ignore rule still keeps unrelated
 environment extracts out. Stages only; never commits.
 """
@@ -34,7 +34,7 @@ def main(argv=None):
         print(f"error: {exc}", file=sys.stderr)
         return 2
     rel = [str(f.relative_to(ROOT)) for f in artifacts]
-    extra = [x for x in (f"work/{a.ticket}", f"manifests/{a.ticket}.yaml") if (ROOT / x).exists()]
+    extra = [x for x in (f"work/{a.ticket}.md", f"manifests/{a.ticket}.yaml") if (ROOT / x).exists()]
     for x in rel + extra:
         print(f"  {'would stage' if a.dry_run else 'stage':11} {x}")
     if a.dry_run:

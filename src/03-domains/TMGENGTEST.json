@@ -1,0 +1,21 @@
+{
+  "alndomain": [
+    {
+      "description": "High",
+      "value": "HIGH"
+    },
+    {
+      "description": "Low",
+      "value": "LOW"
+    },
+    {
+      "description": "Medium",
+      "value": "MEDIUM"
+    }
+  ],
+  "description": "ENG-TEST-001 engine test domain: LOW / MEDIUM / HIGH",
+  "domainid": "TMGENGTEST",
+  "domaintype": "ALN",
+  "length": 10,
+  "maxtype": "ALN"
+}

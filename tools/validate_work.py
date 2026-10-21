@@ -1,238 +1,203 @@
-"""Run the MaximoDev engine's computed validators (engine/04_VALIDATORS.md) for one work package.
+"""Check one ticket file for consistency with src/, the manifest, git and the deploy record.
 
   python3 tools/validate_work.py TICKET [--json]
 
-Offline: reads work/<TICKET>/*.md, manifests/<TICKET>.yaml, src/, engine/roster.yaml and
-maxdev/registry.yaml. Exit 1 if any validator FAILs. SKIP means the register has no rows yet.
+  T-01  Requirement IDs unique; each has acceptance criteria
+  T-02  Each requirement has a design row with a valid ladder; right of CONFIGURATION says why
+  T-03  Non-OOB design rows name artifacts that exist in the Artifacts table, and vice versa
+  T-04  Each artifact file exists and sits in the folder of its registry type
+  T-05  The manifest resolves exactly the artifact files (both directions)
+  T-06  Each artifact file is staged in git and the working copy matches the index
+  T-07  Script artifacts pass maxdev lint with 0 errors
+  T-08  Each APPLY has an earlier DRY-RUN, the user's quoted approval, a receipt, and a later RE-DIFF that says `same`
+  T-09  Bug tickets record a reproduction, a root cause and a regression test
+  T-10  Status `done`: every requirement has a PASS test with evidence; no [[PLACEHOLDER left
+
+Offline. PASS / FAIL / SKIP (nothing to check yet). Exit 1 on any FAIL.
 """
 from pathlib import Path
 import argparse
 import json
+import os
 import re
+import subprocess
 import sys
-
-import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-PREFIXES = {"FUN", "TEC", "UI", "WF", "INT", "GIS", "AI", "SEC", "DAT", "MOB", "RPT", "SVC", "CNV", "ENV"}
 LADDER = ["OOB", "CONFIGURATION", "AUTOMATION SCRIPT", "INTEGRATION", "CUSTOM JAVA"]
-CHANGES = {"NEW", "MODIFY", "RETIRE", "NO-CHANGE"}
-DISPOSITIONS = {"RETAIN", "RECONFIGURE", "REPLACE WITH OOB", "REPLACE WITH AUTOMATION SCRIPT",
-                "REWRITE", "RETIRE", "REQUIRES INVESTIGATION"}
-RESULTS = {"PASS", "FAIL", "NOT RUN", "BLOCKED"}
-SPECIALIST = {"INT": "INTEGRATION_REGISTER.md", "GIS": "GIS_REGISTER.md", "AI": "AI_AGENT_REGISTER.md",
-              "DAT": "DATA_LOAD_REGISTER.md", "SEC": "SECURITY_REGISTER.md"}
-REQ_ID = re.compile(r"\b([A-Z]{2,3})-\d{3,}\b")
+CHANGES = {"NEW", "MODIFY", "RETIRE"}
+ID = re.compile(r"\b[A-Z]+-\d+\b")
 
 
-def table(path: Path) -> list[dict]:
-    """Rows of the first Markdown table in a register, keyed by header; blank rows dropped."""
-    if not path.is_file():
-        return []
-    header, rows = None, []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        s = line.strip()
-        if not s.startswith("|"):
-            if header is not None:
-                break
+def sections(text: str) -> dict[str, list[dict]]:
+    """First Markdown table under each `## Heading`, as row dicts keyed by header; blank rows dropped."""
+    out, current, header = {}, None, None
+    for line in text.splitlines():
+        if line.startswith("## "):
+            current, header = line[3:].strip(), None
+            out[current] = []
             continue
-        cells = [c.strip().strip("`") for c in s.strip("|").split("|")]
+        s = line.strip()
+        if current is None or not s.startswith("|"):
+            continue
+        cells = [c.strip().strip("`").strip() for c in s.strip("|").split("|")]
         if header is None:
             header = cells
         elif set("".join(cells)) <= set("-: "):
             continue
         elif any(cells):
-            rows.append(dict(zip(header, cells + [""] * (len(header) - len(cells)))))
-    return rows
+            out[current].append(dict(zip(header, cells + [""] * (len(header) - len(cells)))))
+    return out
 
 
-def ids(cell: str) -> list[str]:
-    return [m.group(0) for m in REQ_ID.finditer(cell or "")]
+def field(text: str, name: str) -> str:
+    m = re.search(r"^- \*\*%s:\*\*\s*(.*)$" % re.escape(name), text, re.M)
+    return m.group(1).strip() if m else ""
 
 
-def split(cell: str) -> list[str]:
-    return [x.strip() for x in re.split(r"[,;\s]+", cell or "") if x.strip()]
-
-
-def _untracked(root: Path, paths: list[Path]) -> list[Path] | None:
-    """Files not in the git index (staged or committed); None when root is not a git work tree."""
-    import subprocess
-    if not paths:
-        return []
-    import os
-    # Inside a git hook GIT_DIR/GIT_INDEX_FILE point at the hook's repo; resolve from root instead.
-    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
-    p = subprocess.run(["git", "ls-files", "--", *[str(x) for x in paths]], cwd=root,
-                       capture_output=True, text=True, env=env)
-    if p.returncode:
-        return None
-    tracked = {(root / line).resolve() for line in p.stdout.splitlines()}
-    return [x for x in paths if x.resolve() not in tracked]
+def _git(root: Path, *args: str) -> subprocess.CompletedProcess:
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}  # safe inside git hooks
+    return subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, env=env)
 
 
 def validate(ticket: str, root: Path = ROOT) -> list[dict]:
     from maxdev import builder, manifest, registry
 
-    wp = root / "work" / ticket
-    if not wp.is_dir():
-        raise FileNotFoundError(f"work/{ticket} not found; run tools/new_work.py {ticket}")
-    reg = lambda name: table(wp / name)  # noqa: E731
-    reqs, cls, arts = reg("REQUIREMENT_REGISTER.md"), reg("SOLUTION_CLASSIFICATION.md"), reg("ARTIFACT_REGISTER.md")
-    tests, plan, finds = reg("TEST_REGISTER.md"), reg("DEPLOYMENT_PLAN.md"), reg("FINDINGS_LOG.md")
-    roster = yaml.safe_load((root / "engine/roster.yaml").read_text(encoding="utf-8"))["agents"]
-    type_owner = {t: name for name, a in roster.items() for t in a.get("types") or []}
-    req_ids = [r["Req ID"] for r in reqs]
-    art_ids = {a["Art ID"] for a in arts}
-    active = [r for r in reqs if r.get("Status") not in ("DEFERRED", "REJECTED")]
+    path = root / "work" / f"{ticket}.md"
+    if not path.is_file():
+        raise FileNotFoundError(f"work/{ticket}.md not found; run tools/new_work.py {ticket} --type ...")
+    text = path.read_text(encoding="utf-8")
+    sec = sections(text)
+    reqs, design, arts = sec.get("Requirements", []), sec.get("Design", []), sec.get("Artifacts", [])
+    log, tests, state = sec.get("Deploy log", []), sec.get("Tests", []), sec.get("Current state", [])
+    req_ids = [r.get("ID", "") for r in reqs]
+    art_ids = {a.get("Art", "") for a in arts}
     out = []
 
-    def result(vid, rows, problems):
-        status = "SKIP" if not rows else ("FAIL" if problems else "PASS")
-        out.append({"id": vid, "status": status, "problems": problems if rows else []})
+    def result(vid, checked, problems):
+        out.append({"id": vid, "status": "SKIP" if not checked else ("FAIL" if problems else "PASS"),
+                    "problems": problems if checked else []})
 
-    # W-01..W-05 traceability
-    p = []
-    for r in reqs:
-        rid = r["Req ID"]
-        if not re.fullmatch(r"[A-Z]{2,3}-\d{3,}", rid) or rid.split("-")[0] not in PREFIXES:
-            p.append(f"{rid or '(blank)'}: ID must be PREFIX-NNN with a taxonomy §1 prefix")
-        if req_ids.count(rid) > 1:
-            p.append(f"{rid}: duplicate ID")
-        if not r.get("Acceptance criteria"):
-            p.append(f"{rid}: no acceptance criteria")
-    result("W-01", reqs, sorted(set(p)))
-    classified = {r["Req ID"] for r in cls}
-    result("W-02", active, [f"{r['Req ID']}: no classification row" for r in active if r["Req ID"] not in classified])
-    p = []
-    for r in cls:
-        pos = r.get("Ladder position", "")
-        if pos not in LADDER:
-            p.append(f"{r['Req ID']}: ladder position {pos!r} not in taxonomy §2")
-        elif LADDER.index(pos) > 1 and not r.get("Departure reason"):
-            p.append(f"{r['Req ID']}: {pos} needs a departure reason")
-    result("W-03", cls, p)
-    p = []
-    for r in cls:
-        if r.get("Ladder position") == "OOB":
-            continue
-        named = split(r.get("Artifact IDs"))
-        if not named:
-            p.append(f"{r['Req ID']}: non-OOB row names no artifact")
-        p += [f"{r['Req ID']}: artifact {a} not in ARTIFACT_REGISTER" for a in named if a not in art_ids]
-    result("W-04", cls, p)
-    p = []
-    for a in arts:
-        named = ids(a.get("Req IDs"))
-        if not named:
-            p.append(f"{a['Art ID']}: traces to no requirement")
-        p += [f"{a['Art ID']}: requirement {r} does not exist" for r in named if r not in req_ids]
-    result("W-05", arts, p)
+    p = [f"{i or '(blank)'}: duplicate ID" for i in sorted(set(req_ids)) if req_ids.count(i) > 1]
+    p += [f"{r.get('ID') or '(blank)'}: no acceptance criteria" for r in reqs if not r.get("Acceptance")]
+    result("T-01", reqs, p)
 
-    # W-10..W-16 repository consistency
-    deployable = [a for a in arts if a.get("Change") != "NO-CHANGE"]
-    files = {}
-    p10, p11, p12, p15, p16 = [], [], [], [], []
-    for a in arts:
-        aid, typ, change = a["Art ID"], a.get("Type", ""), a.get("Change", "")
-        if change not in CHANGES:
-            p16.append(f"{aid}: change {change!r} not in taxonomy §3")
-        if change == "RETIRE" and "approv" not in json.dumps(a).lower():
-            p16.append(f"{aid}: RETIRE needs the user's approval cited")
-        if typ not in type_owner:
-            p12.append(f"{aid}: type {typ!r} is not a registry type owned in roster.yaml")
-        elif a.get("Owner") != type_owner[typ]:
-            p12.append(f"{aid}: owner {a.get('Owner')!r}, roster owner of {typ} is {type_owner[typ]}")
-        if change == "NO-CHANGE":
+    designed = {d.get("Req") for d in design}
+    p = [f"{i}: no design row" for i in req_ids if i not in designed]
+    for d in design:
+        lad = d.get("Ladder", "")
+        if lad not in LADDER:
+            p.append(f"{d.get('Req')}: ladder {lad!r} not one of {', '.join(LADDER)}")
+        elif LADDER.index(lad) > 1 and not d.get("Why not further left"):
+            p.append(f"{d.get('Req')}: {lad} needs 'Why not further left'")
+    result("T-02", reqs, p)
+
+    p, named = [], set()
+    for d in design:
+        if d.get("Ladder") == "OOB":
             continue
+        ids = ID.findall(d.get("Artifacts", ""))
+        named |= set(ids)
+        if not ids:
+            p.append(f"{d.get('Req')}: non-OOB design names no artifact")
+        p += [f"{d.get('Req')}: artifact {i} not in Artifacts table" for i in ids if i not in art_ids]
+    p += [f"{a}: not referenced by any design row" for a in sorted(art_ids - named)]
+    result("T-03", design, p)
+
+    files, p = {}, []
+    for a in arts:
+        aid, typ = a.get("Art", ""), a.get("Type", "")
+        if a.get("Change") not in CHANGES:
+            p.append(f"{aid}: change {a.get('Change')!r} not one of {', '.join(sorted(CHANGES))}")
         f = root / a.get("File", "")
         if not a.get("File") or not f.is_file():
-            p10.append(f"{aid}: file {a.get('File') or '(blank)'} not found")
+            p.append(f"{aid}: file {a.get('File') or '(blank)'} not found")
             continue
         files[f.resolve()] = aid
         t = registry.type_for_path(f)
         if not t or t.id != typ:
-            p11.append(f"{aid}: {a['File']} is a {t.id if t else 'unregistered'} file, row says {typ}")
-        if f.suffix in (".py", ".js") and t and t.handler == "autoscript":
-            errs = [i for i in builder.lint_text(f.read_text(encoding="utf-8"), f.name) if i["level"] == "error"]
-            p15 += [f"{aid}: {i['rule']} line {i['line']}" for i in errs]
-    result("W-10", deployable, p10)
-    result("W-11", deployable, p11)
-    result("W-12", arts, p12)
+            p.append(f"{aid}: {a['File']} is a {t.id if t else 'unregistered'} file, row says {typ!r}")
+    result("T-04", arts, p)
+
     mpath = root / "manifests" / f"{ticket}.yaml"
-    resolved = set()
-    p13 = []
+    p, resolved = [], set()
     if mpath.is_file():
         try:
             resolved = {Path(f).resolve() for _, f in manifest.items(manifest.load(str(mpath)))}
-        except Exception as exc:  # a broken manifest is itself the finding
-            p13.append(f"manifests/{ticket}.yaml does not resolve: {exc}")
-    elif deployable:
-        p13.append(f"manifests/{ticket}.yaml missing")
-    p13 += [f"{aid}: {f.relative_to(root)} not in manifest" for f, aid in files.items() if f not in resolved]
-    result("W-13", deployable, p13)
-    result("W-14", resolved, [f"{f.relative_to(root)}: deployed by manifest but not in ARTIFACT_REGISTER"
-                               for f in sorted(resolved) if f not in files])
-    result("W-15", [a for a in deployable if a.get("Type") == "autoscript"], p15)
-    result("W-16", arts, p16)
-    untracked = _untracked(root, list(files))
-    result("W-17", files if untracked is not None else [],
-           [f"{files[f]}: {f.relative_to(root)} not tracked by git; run tools/track_work.py {ticket}"
-            for f in untracked or []])
+        except Exception as exc:  # a manifest that does not resolve is itself the finding
+            p.append(f"manifests/{ticket}.yaml does not resolve: {exc}")
+    elif arts:
+        p.append(f"manifests/{ticket}.yaml missing")
+    for a in arts:  # rows, not existing files, so an empty manifest cannot pass
+        if a.get("File") and (root / a["File"]).resolve() not in resolved:
+            p.append(f"{a.get('Art')}: {a['File']} not in manifest")
+    p += [f"{f.relative_to(root)}: in manifest but not in Artifacts" for f in sorted(resolved) if f not in files]
+    result("T-05", arts, p)
 
-    # W-20..W-28 delivery evidence
-    p20, p21, p22 = [], [], []
-    for i, s in enumerate(plan):
-        if s.get("Mode") != "APPLY":
-            continue
-        env = s.get("Env", "")
-        if not any(x.get("Mode") == "DRY-RUN" and x.get("Env") == env for x in plan[:i]):
-            p20.append(f"step {s.get('Step')}: APPLY on {env} without an earlier DRY-RUN")
+    p, checked = [], files
+    if files:
+        rels = {str(f.relative_to(root)): aid for f, aid in files.items()}
+        ls = _git(root, "ls-files", "--", *rels)
+        if ls.returncode:
+            checked = {}  # not a git work tree
+        else:
+            tracked = set(ls.stdout.split())
+            dirty = set(_git(root, "diff", "--name-only", "--", *rels).stdout.split())
+            for rel, aid in rels.items():
+                if rel not in tracked:
+                    p.append(f"{aid}: {rel} not staged; run tools/track_work.py {ticket}")
+                elif rel in dirty:
+                    p.append(f"{aid}: {rel} changed after staging; re-run tools/track_work.py {ticket}")
+    result("T-06", checked, p)
+
+    p, scripts = [], []
+    for f, aid in files.items():
+        t = registry.type_for_path(f)
+        if t and t.handler == "autoscript":
+            scripts.append(f)
+            p += [f"{aid}: {i['rule']} line {i['line']}"
+                  for i in builder.lint_text(f.read_text(encoding="utf-8"), f.name) if i["level"] == "error"]
+    result("T-07", scripts, p)
+
+    p, applies = [], [(i, s) for i, s in enumerate(log) if s.get("Mode") == "APPLY"]
+    for i, s in applies:
+        env, step = s.get("Env", ""), s.get("Step") or i + 1
+        if not any(x.get("Mode") == "DRY-RUN" and x.get("Env") == env for x in log[:i]):
+            p.append(f"step {step}: APPLY on {env} without an earlier DRY-RUN")
         if not s.get("Approval (quote)") or not s.get("Date"):
-            p21.append(f"step {s.get('Step')}: APPLY without quoted approval and date")
+            p.append(f"step {step}: APPLY without the user's quoted approval and date")
         rc = s.get("Receipt", "")
-        if not rc or not (root / rc).is_file() or f"receipts/{env}/" not in rc:
-            p22.append(f"step {s.get('Step')}: receipt {rc or '(blank)'} not found under .maxdev/receipts/{env}/")
-    applies = [s for s in plan if s.get("Mode") == "APPLY"]
-    result("W-20", applies, p20)
-    result("W-21", applies, p21)
-    result("W-22", applies, p22)
-    verified = [r for r in reqs if r.get("Status") == "VERIFIED"]
-    passing = {rid for t in tests if t.get("Result") == "PASS" and t.get("Evidence") for rid in ids(t.get("Req IDs"))}
-    result("W-23", verified, [f"{r['Req ID']}: VERIFIED without a PASS test with evidence"
-                              for r in verified if r["Req ID"] not in passing])
+        if not rc or f"receipts/{env}/" not in rc or not (root / rc).is_file():
+            p.append(f"step {step}: receipt {rc or '(blank)'} not found under .maxdev/receipts/{env}/")
+        later = [x for x in log[i + 1:] if x.get("Mode") == "RE-DIFF" and x.get("Env") == env]
+        res = later[-1].get("Result", "") if later else ""
+        if not later:
+            p.append(f"step {step}: no RE-DIFF after APPLY on {env}")
+        elif not re.search(r"\bsame\b", res) or re.search(r"\bchanged\b|missing", res):
+            p.append(f"step {step}: last RE-DIFF on {env} is not `same`: {res[:80]}")
+    result("T-08", applies, p)
+
+    bug = field(text, "Type").lower() == "bug"
     p = []
-    for t in tests:
-        if t.get("Result") not in RESULTS:
-            p.append(f"{t.get('Test ID')}: result {t.get('Result')!r} not in taxonomy §5")
-        named = ids(t.get("Req IDs"))
-        if not named:
-            p.append(f"{t.get('Test ID')}: references no requirement")
-        p += [f"{t.get('Test ID')}: requirement {r} does not exist" for r in named if r not in req_ids]
-    result("W-24", tests, p)
-    result("W-25", finds, [f"{f.get('F ID')}: OPEN BLOCKER - {f.get('Finding')}" for f in finds
-                           if f.get("Severity") == "BLOCKER" and f.get("Status") == "OPEN"])
-    conv = reg("CONVERSION_REGISTER.md")
-    cnv = [r for r in active if r["Req ID"].startswith("CNV-")]
-    p = [f"{c.get('Item ID')}: disposition {c.get('Disposition')!r} not in taxonomy §4"
-         for c in conv if c.get("Disposition") not in DISPOSITIONS]
-    covered = {rid for c in conv for rid in ids(c.get("Req IDs"))}
-    p += [f"{r['Req ID']}: no conversion register row" for r in cnv if r["Req ID"] not in covered]
-    result("W-26", cnv or conv, p)
-    p, spec_rows = [], []
-    for r in active:
-        name = SPECIALIST.get(r["Req ID"].split("-")[0])
-        if name:
-            spec_rows.append(r)
-            if r["Req ID"] not in {x for row in reg(name) for x in ids(row.get("Req IDs"))}:
-                p.append(f"{r['Req ID']}: no row in {name}")
-    result("W-27", spec_rows, p)
-    docs = [wp / n for n in ("DESIGN_DOC.md", "HANDOFF.md") if (wp / n).is_file()]
-    check = (wp / "WORK_CHECKLIST.md").is_file() and re.search(
-        r"\|\s*D10[^|]*\|\s*✅", (wp / "WORK_CHECKLIST.md").read_text(encoding="utf-8"))
-    result("W-28", docs if check else [], [f"{d.name}: unresolved [[PLACEHOLDER" for d in docs
-                                           if "[[PLACEHOLDER" in d.read_text(encoding="utf-8")])
+    if bug:
+        if not state:
+            p.append("bug ticket has no reproduction in Current state")
+        if not re.search(r"\*\*Root cause \(bug only\):\*\*[ \t]*\S", text):
+            p.append("bug ticket has no root cause")
+        if not any("regression" in (t.get("Test", "") + " " + t.get("Command / steps", "")).lower() for t in tests):
+            p.append("bug ticket has no regression test")
+    result("T-09", [1] if bug else [], p)
+
+    done = field(text, "Status").lower() == "done"
+    p = []
+    if done:
+        passing = {r for t in tests if t.get("Result") == "PASS" and t.get("Evidence") for r in ID.findall(t.get("Req", ""))}
+        p += [f"{i}: no PASS test with evidence" for i in req_ids if i not in passing]
+        if "[[PLACEHOLDER" in text:
+            p.append("unresolved [[PLACEHOLDER in the ticket")
+    result("T-10", [1] if done else [], p)
     return out
 
 
@@ -253,8 +218,8 @@ def main(argv=None):
             print(f"{r['id']}  {r['status']}")
             for problem in r["problems"]:
                 print(f"       - {problem}")
-        counts = {s: sum(r["status"] == s for r in res) for s in ("PASS", "FAIL", "SKIP")}
-        print(f"{a.ticket}: {counts['PASS']} PASS, {counts['FAIL']} FAIL, {counts['SKIP']} SKIP")
+        n = {s: sum(r["status"] == s for r in res) for s in ("PASS", "FAIL", "SKIP")}
+        print(f"{a.ticket}: {n['PASS']} PASS, {n['FAIL']} FAIL, {n['SKIP']} SKIP")
     return 1 if any(r["status"] == "FAIL" for r in res) else 0
 
 

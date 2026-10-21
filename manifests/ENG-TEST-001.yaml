@@ -1,0 +1,7 @@
+# Ticket ENG-TEST-001: items mirror the Artifacts table in work/ENG-TEST-001.md.
+#   python3 -m maxdev --env NAME deploy --manifest ENG-TEST-001          (dry run)
+name: ENG-TEST-001
+description: Add ALN domain TMGENGTEST with values LOW, MEDIUM, HIGH (engine test)
+items:
+  - domain: TMGENGTEST                         # ART-001, NEW, src/03-domains/TMGENGTEST.json
+manual: []

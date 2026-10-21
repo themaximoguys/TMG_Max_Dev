@@ -1,8 +1,10 @@
-"""Offline coverage for the MaximoDev engine: scaffolder, validators and roster wiring."""
+"""Offline coverage for the ticket engine: scaffolder and ticket validator."""
 import contextlib
 import io
+import os
 from pathlib import Path
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -14,109 +16,132 @@ import new_work  # noqa: E402
 import validate_work  # noqa: E402
 
 FORMULA = "src/08-formulas/object/ASSET__ENGINETEST.json"
+CLEAN_GIT = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}  # safe inside a git hook
 
 
-def fill(path: Path, *rows: str):
+def table(path: Path, heading: str, *rows: str):
+    """Replace the blank row of the table under `## heading` with rows."""
     lines = path.read_text(encoding="utf-8").splitlines()
-    last = max(i for i, line in enumerate(lines) if line.startswith("|"))
-    lines[last:last + 1] = list(rows)
+    start = lines.index(f"## {heading}")
+    blank = next(i for i in range(start, len(lines))
+                 if lines[i].startswith("|") and lines[i].replace("|", "").strip() == "")
+    lines[blank:blank + 1] = list(rows)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 class EngineTests(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
-        for rel in ("engine", "manifests"):
-            shutil.copytree(ROOT / rel, self.tmp / rel)
+        shutil.copytree(ROOT / "skills/maximo-dev-engine", self.tmp / "skills/maximo-dev-engine")
+        (self.tmp / "manifests").mkdir()
         (self.tmp / FORMULA).parent.mkdir(parents=True)
         (self.tmp / FORMULA).write_text('{"objectname": "ASSET", "formulaname": "ENGINETEST"}\n')
         self.patches = [patch.object(new_work, "ROOT", self.tmp),
-                        patch.object(new_work, "TEMPLATES", self.tmp / "engine/templates"),
+                        patch.object(new_work, "TEMPLATE", self.tmp / "skills/maximo-dev-engine/TICKET_TEMPLATE.md"),
                         patch("maxdev.registry.SRC", self.tmp / "src"),
                         patch("maxdev.registry.ROOTS", [self.tmp / "src/00_predeployment", self.tmp / "src"]),
                         patch("maxdev.engine.REPO", self.tmp),
-                        patch("maxdev.manifest.REPO", self.tmp)]
+                        patch("maxdev.manifest.REPO", self.tmp),
+                        patch.dict(os.environ, CLEAN_GIT, clear=True)]
         for p in self.patches:
             p.start()
-        with contextlib.redirect_stdout(io.StringIO()):
-            self.assertEqual(new_work.main(["T-1", "--env", "demo"]), 0)
-        self.wp = self.tmp / "work/T-1"
+        self.ticket = self.tmp / "work/T-1.md"
 
     def tearDown(self):
-        for p in self.patches:
+        for p in reversed(self.patches):
             p.stop()
         shutil.rmtree(self.tmp)
 
-    def statuses(self):
+    def open(self, kind="feature"):
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(new_work.main(["T-1", "--type", kind, "--env", "demo"]), 0)
+
+    def res(self):
         return {r["id"]: r for r in validate_work.validate("T-1", root=self.tmp)}
 
-    def build_valid_package(self):
-        fill(self.wp / "REQUIREMENT_REGISTER.md",
-             "| FUN-001 | SRC-1 | Asset cost formula | ENGINETEST evaluates | High | DESIGNED | requirements-analyst |")
-        fill(self.wp / "SOLUTION_CLASSIFICATION.md",
-             "| FUN-001 | Object formula | CONFIGURATION | | ART-1 | extract | maximo-functional-architect |")
-        fill(self.wp / "ARTIFACT_REGISTER.md",
-             f"| ART-1 | FUN-001 | objformula | ASSET/ENGINETEST | {FORMULA} | NEW | configuration-developer | |")
+    def build(self):
+        table(self.ticket, "Requirements", "| FUN-001 | Asset cost formula | ENGINETEST evaluates |")
+        table(self.ticket, "Design", "| FUN-001 | CONFIGURATION | | ART-1 | main |")
+        table(self.ticket, "Artifacts", f"| ART-1 | objformula | {FORMULA} | NEW | maximo-dev |")
         (self.tmp / "manifests/T-1.yaml").write_text(f"name: T-1\nitems:\n  - path: {FORMULA}\n")
 
-    def test_scaffold_fills_placeholders_and_never_overwrites(self):
-        names = {p.name for p in self.wp.glob("*.md")}
-        self.assertEqual(names, {p.name for p in (ROOT / "engine/templates").glob("*.md")})
-        text = (self.wp / "WORK_CHECKLIST.md").read_text()
+    def test_scaffold_fills_template_and_never_overwrites(self):
+        self.open("bug")
+        text = self.ticket.read_text()
         self.assertNotIn("{{", text)
-        self.assertIn("demo", text)
-        (self.wp / "WORK_CHECKLIST.md").write_text("kept")
-        with contextlib.redirect_stdout(io.StringIO()):
-            new_work.main(["T-1"])
-        self.assertEqual((self.wp / "WORK_CHECKLIST.md").read_text(), "kept")
+        self.assertIn("- **Type:** bug", text)
+        self.assertTrue((self.tmp / "manifests/T-1.yaml").is_file())
+        self.ticket.write_text("kept")
+        self.open()
+        self.assertEqual(self.ticket.read_text(), "kept")
 
-    def test_empty_package_skips_everything(self):
-        self.assertEqual({r["status"] for r in self.statuses().values()}, {"SKIP"})
+    def test_empty_ticket_skips_everything(self):
+        self.open()
+        self.assertEqual({r["status"] for r in self.res().values()}, {"SKIP"})
 
-    def test_valid_package_passes(self):
-        self.build_valid_package()
-        res = self.statuses()
+    def test_valid_ticket_passes(self):
+        self.open()
+        self.build()
+        subprocess.run(["git", "init", "-q"], cwd=self.tmp, check=True)
+        subprocess.run(["git", "add", "-f", FORMULA], cwd=self.tmp, check=True)
+        res = self.res()
         self.assertFalse([r for r in res.values() if r["status"] == "FAIL"], res)
-        for vid in ("W-01", "W-02", "W-03", "W-04", "W-05", "W-10", "W-11", "W-12", "W-13", "W-14"):
+        for vid in ("T-01", "T-02", "T-03", "T-04", "T-05", "T-06"):
             self.assertEqual(res[vid]["status"], "PASS", vid)
 
-    def test_defects_are_detected(self):
-        self.build_valid_package()
-        fill(self.wp / "SOLUTION_CLASSIFICATION.md",
-             "| FUN-001 | Script | AUTOMATION SCRIPT | | ART-9 | | maximo-functional-architect |",
-             "| GIS-001 | Map | CONFIGURATION | | ART-1 | | gis-esri-specialist |")
-        fill(self.wp / "REQUIREMENT_REGISTER.md",
-             "| FUN-001 | SRC-1 | Asset cost | evaluates | High | VERIFIED | requirements-analyst |",
-             "| GIS-001 | SRC-1 | Map | shows | Low | OPEN | requirements-analyst |")
-        fill(self.wp / "ARTIFACT_REGISTER.md",
-             f"| ART-1 | FUN-001 | objformula | X | {FORMULA} | NEW | automation-script-developer | |",
-             "| ART-2 | FUN-404 | domain | Y | src/03-domains/NOPE.json | NEW | configuration-developer | |")
-        fill(self.wp / "DEPLOYMENT_PLAN.md", "| 1 | demo | deploy | APPLY | ok | | | |")
-        fill(self.wp / "FINDINGS_LOG.md", "| F-1 | D5 | ART-1 | bad | BLOCKER | x | fix | OPEN |")
-        res = self.statuses()
-        for vid in ("W-03", "W-04", "W-05", "W-10", "W-12", "W-20", "W-21", "W-22", "W-23", "W-25", "W-27"):
+    def test_traceability_and_manifest_defects(self):
+        self.open()
+        table(self.ticket, "Requirements", "| FUN-001 | x | |", "| FUN-001 | y | z |")
+        table(self.ticket, "Design", "| FUN-001 | AUTOMATION SCRIPT | | ART-9 | main |")
+        table(self.ticket, "Artifacts", f"| ART-1 | domain | {FORMULA} | NEW | maximo-dev |",
+              "| ART-2 | domain | src/03-domains/NOPE.json | ADD | maximo-dev |")
+        (self.tmp / "manifests/T-1.yaml").write_text("name: T-1\nitems: []\n")
+        res = self.res()
+        for vid in ("T-01", "T-02", "T-03", "T-04", "T-05"):
             self.assertEqual(res[vid]["status"], "FAIL", vid)
 
-    def test_unregistered_manifest_file_fails_w14(self):
-        self.build_valid_package()
-        extra = self.tmp / "src/08-formulas/object/ASSET__EXTRA.json"
-        extra.write_text("{}\n")
-        (self.tmp / "manifests/T-1.yaml").write_text(
-            f"name: T-1\nitems:\n  - path: [{FORMULA}, src/08-formulas/object/ASSET__EXTRA.json]\n")
-        self.assertEqual(self.statuses()["W-14"]["status"], "FAIL")
+    def test_git_tracking_and_stale_index(self):
+        self.open()
+        self.build()
+        self.assertEqual(self.res()["T-06"]["status"], "SKIP")  # not a git work tree
+        subprocess.run(["git", "init", "-q"], cwd=self.tmp, check=True)
+        self.assertEqual(self.res()["T-06"]["status"], "FAIL")
+        subprocess.run(["git", "add", "-f", FORMULA], cwd=self.tmp, check=True)
+        self.assertEqual(self.res()["T-06"]["status"], "PASS")
+        (self.tmp / FORMULA).write_text('{"changed": true}\n')
+        self.assertEqual(self.res()["T-06"]["status"], "FAIL")
 
-    def test_git_tracking_check_skips_outside_a_work_tree_and_fails_untracked(self):
-        self.build_valid_package()
-        self.assertEqual(self.statuses()["W-17"]["status"], "SKIP")  # temp copy is not a git repo
-        import os
-        import subprocess
-        # Run under a pre-commit hook, GIT_* would aim these commands at the real repository.
-        env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
-        with patch.dict(os.environ, env, clear=True):
-            subprocess.run(["git", "init", "-q"], cwd=self.tmp, check=True)
-            self.assertEqual(self.statuses()["W-17"]["status"], "FAIL")
-            subprocess.run(["git", "add", "-f", FORMULA], cwd=self.tmp, check=True)
-            self.assertEqual(self.statuses()["W-17"]["status"], "PASS")
+    def test_apply_needs_dry_run_approval_receipt_and_same_rediff(self):
+        self.open()
+        self.build()
+        receipt = self.tmp / ".maxdev/receipts/demo/1.json"
+        receipt.parent.mkdir(parents=True)
+        receipt.write_text("{}")
+        table(self.ticket, "Deploy log", "| 1 | demo | deploy | APPLY | created | | | |")
+        self.assertEqual(self.res()["T-08"]["status"], "FAIL")
+        self.ticket.write_text(self.ticket.read_text().replace(
+            "| 1 | demo | deploy | APPLY | created | | | |",
+            "| 1 | demo | deploy | DRY-RUN | would-create | | | d |\n"
+            "| 2 | demo | deploy --apply | APPLY | created | .maxdev/receipts/demo/1.json | \"yes\" | d |\n"
+            "| 3 | demo | diff | RE-DIFF | changed: length | | | d |"))
+        self.assertEqual(self.res()["T-08"]["status"], "FAIL")  # applied, but live differs from repo
+        self.ticket.write_text(self.ticket.read_text().replace("| changed: length |", "| same |"))
+        self.assertEqual(self.res()["T-08"]["status"], "PASS")
+
+    def test_bug_ticket_needs_reproduction_root_cause_and_regression(self):
+        self.open("bug")
+        self.assertEqual(self.res()["T-09"]["status"], "FAIL")
+        table(self.ticket, "Current state", "| repro | demo | query X | wrong value |")
+        self.ticket.write_text(self.ticket.read_text().replace(
+            "**Root cause (bug only):**", "**Root cause (bug only):** script skips nulls"))
+        table(self.ticket, "Tests", "| regression-1 | BUG-001 | demo | query X | PASS | ok |")
+        self.assertEqual(self.res()["T-09"]["status"], "PASS")
+
+    def test_done_needs_passing_tests_for_every_requirement(self):
+        self.open()
+        self.build()
+        self.ticket.write_text(self.ticket.read_text().replace("- **Status:** intake", "- **Status:** done"))
+        self.assertEqual(self.res()["T-10"]["status"], "FAIL")
 
 
 if __name__ == "__main__":

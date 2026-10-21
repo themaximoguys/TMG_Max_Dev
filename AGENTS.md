@@ -28,7 +28,7 @@ that same content for discovery. Read only the skill and references relevant to 
 | Convert Java customizations | `skills/convert-java-to-script/SKILL.md` |
 | Convert TRM rules | `skills/convert-trm-to-script/SKILL.md` |
 | Generate workflows and their dependencies | `skills/maximo-workflow/SKILL.md` |
-| Run a multi-artifact work package with the specialist agents | `skills/maximo-dev-engine/SKILL.md` |
+| Work a ticket end to end: feature, enhancement or bug fix | `skills/maximo-dev-engine/SKILL.md` |
 
 `docs/standards/TMG_AUTOSCRIPT_STANDARDS.md` is authoritative for scripts.
 Build from catalog templates with `python3 -m maxdev build`; Java conversion starts
@@ -61,7 +61,7 @@ Reference material is TMG-only: do not introduce client names or third-party ass
 - Engine/CLI/MCP changes: `python3 -m unittest discover -s tests`.
 - Scripts: `python3 -m maxdev lint` (or pass changed script paths); no lint errors.
 - Agent setup: `python3 tools/check_agent_setup.py`.
-- Work packages: `python3 tools/validate_work.py TICKET` (engine validators, `engine/04_VALIDATORS.md`).
+- Tickets: `python3 tools/validate_work.py TICKET` (T-01–T-10, see the tool's docstring).
 - Components: `python3 tools/check_components.py` (registry folders, predeployment, standards).
 - Git hooks in `.githooks/` run these checks on commit/push once enabled with
   `git config core.hooksPath .githooks`; Claude Code hooks are in `.claude/settings.json`.
