@@ -36,7 +36,7 @@ Route column key:
 | 2 | Data restrictions | `02-security/data-restrictions` | JSON | REST `MXAPIDATARESTRICTION` | Generated ids differ per env |
 | 2 | Sig option grants | `02-security/grants` | JSON | REST `MXAPIGROUP` children | Merge, never removes |
 | 2 | Attribute formulas | `08-formulas` | JSON | REST-replace `MXAPIATTRFORMULA` | |
-| 2 | Object formulas | `08-formulas/object` | JSON | REST-replace `MXAPIOBJFORMULA` | extract/diff verified on demo; deploy unverified |
+| 2 | Object formulas | `08-formulas/object` | JSON | REST-replace `MXAPIOBJFORMULA` | extract, diff and replace-deploy verified on demo |
 | 3 | Automation scripts (all launch point types) | `09-automation-scripts/<type>/` | `.py`/`.js` + scriptConfig | REST `MXAPIAUTOSCRIPT` / `MXSCRIPT` | object, attribute, action, condition, crontask, integration, library, REST handlers |
 | 3 | Actions & action groups | `10-actions` | JSON | REST `MXAPIACTION` | Members sorted before groups |
 | 3 | Escalations | `11-escalations` | JSON | REST `MXAPIESCALATION` | |

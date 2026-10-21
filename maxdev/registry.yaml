@@ -205,8 +205,7 @@ types:
     name: [objectname, formulaname]
     handler: replace
     select: "objectname,formulaname,description,formula,validateformula,objectformulacond{*}"
-    status: verify
-    note: IBM MXAPIOBJFORMULA (authapp MXAPIOBJFORMULA) reads over REST on demo; no TMG clone needed. Replaced whole like attribute formulas; write path not yet proven live. Deploy before attribute formulas that call it.
+    note: IBM MXAPIOBJFORMULA (authapp MXAPIOBJFORMULA) works over REST; no TMG clone needed. Replaced whole like attribute formulas (verified on demo 2026-10-21; the record gets a new objectformulaid). Deploy before attribute formulas that call it.
 
   - id: condprop
     label: Conditional UI (CTRLGROUP/CTRLCONDITION/CTRLCONDPROP)
