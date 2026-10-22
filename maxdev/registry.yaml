@@ -9,11 +9,12 @@
 #   key       attributes that uniquely identify a record (first = primary)
 #   folder    repo folder (under src/) holding one file per record
 #   name      fields joined with '__' to make the filename (defaults to key)
-#   handler   json | replace | autoscript | appxml | readonly | manual
+#   handler   json | replace | autoscript | appxml | sigauth | readonly | manual
 #               json       GET by key -> MERGE if found, else POST
 #               replace    delete-by-key then POST (MERGE leaves stale children)
 #               autoscript .py/.js source + scriptConfig header -> MXAPIAUTOSCRIPT
 #               appxml     presentation XML via MXAPIPRESENTATION (whole-CLOB, merge-safe)
+#               sigauth    grant-only sig options on a group's apps via MXAPIGROUP maxapps
 #               readonly   extract + diff only; deploy refused
 #               manual     tracked in Git, applied by hand / other tool (see note)
 #   select    oslc.select for extract (child collections with {..})
@@ -216,6 +217,15 @@ types:
     name: [app, optionname, groupname]
     handler: replace
     note: Three-level tree — a parent MERGE leaves stale child rows, so it is replaced whole. Needs TMGMXAPICONDPROP from src/00_predeployment/.
+
+  - id: apprights
+    label: App and object-structure rights per group (MXAPIGROUP)
+    layer: 2
+    os: MXAPIGROUP
+    key: [groupname]
+    folder: 02-security/app-rights
+    handler: sigauth
+    note: "{groupname, rights: {APP: [OPTION, ...]}}. Sets sigoption.authorized through MXAPIGROUP maxapps, which accepts APP- and OS-type apps that TMGMXAPIGRANT (APPLICATIONAUTH) rejects with BMXAA4191E. Grant-only: never revokes. Diff reports rights not yet granted. Written by `maxdev dashboard`; no extract (a group holds thousands of rows)."
 
   - id: query
     label: Saved queries (QUERY)

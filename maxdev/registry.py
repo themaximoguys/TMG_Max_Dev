@@ -10,7 +10,7 @@ import yaml
 from .env import REPO
 
 SRC = REPO / "src"
-HANDLERS = {"json", "replace", "autoscript", "appxml", "readonly", "manual"}
+HANDLERS = {"json", "replace", "autoscript", "appxml", "sigauth", "readonly", "manual"}
 
 
 @dataclass
@@ -40,7 +40,7 @@ class ArtifactType:
 
     @property
     def deployable(self) -> bool:
-        return self.handler in {"json", "replace", "autoscript", "appxml"} and bool(self.os)
+        return self.handler in {"json", "replace", "autoscript", "appxml", "sigauth"} and bool(self.os)
 
     def resolve_os(self, client=None, overrides: dict[str, str] | None = None) -> str:
         """Pick the structure to use: env override > first that exists on tenant > first listed."""

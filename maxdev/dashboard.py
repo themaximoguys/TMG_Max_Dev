@@ -6,6 +6,7 @@ Two Manage front ends share the same building blocks:
 
   catalog/dashboards/<NAME>.yaml           the spec (see maintenance_supervisor.yaml)
     -> src/02-security/groups/             optional dedicated security group
+    -> src/02-security/app-rights/         OPDASHBOARD rights + READ on the object structures cards use
     -> src/07-app-designer/_queries/       saved queries for result sets and work queues
     -> src/19-kpi/                         KPI definitions (KPI value / trend / comparison cards, KPI portlets)
     -> src/07-app-designer/_workqueues/    work queues (work queue, map and table cards; result-set style lists)
@@ -51,7 +52,8 @@ FORMATS = {"DECIMAL", "PERCENT", "CURRENCY"}
 NOW = {"sqlserver": "GETDATE()", "oracle": "SYSDATE", "db2": "CURRENT TIMESTAMP"}
 # Operational Dashboard rights (OPDASHBOARD sig options on MAS 9) and what each needs on MXAPIVIEWMANAGER.
 # Cards read through these object structures, so a group without READ on them sees empty cards (BMXAA0024E).
-# Granted by hand: APPLICATIONAUTH.APP (FldApp) rejects APP/OS-type apps over REST (BMXAA4191E on demo).
+# Granted through MXAPIGROUP maxapps (`apprights`): APPLICATIONAUTH via TMGMXAPIGRANT rejects these app
+# types with BMXAA4191E (seen on demo).
 DASH_RIGHTS = {"READ": [], "INSERT_PRIVATE": ["SAVE", "INSERT"], "INSERT_PUBLIC": ["SAVE", "INSERT"],
                "MANAGE_PRIVATE": ["SAVE"], "HIDE_PUBLIC": ["SAVE"], "DELETE_PUBLIC": ["DELETE"]}
 CARD_SOURCES = ["MXAPIVIEWMANAGER", "MXAPIWORKQUEUE", "MXAPIWFASSIGNMENT", "MXAPIPERSON", "MXAPIKPIMAIN"]
@@ -303,6 +305,14 @@ def build(name_or_path: str, write_manifest: bool = True) -> dict:
     if sec.get("create_group"):
         save("securitygroup", {"groupname": groups[0], "description": sec.get("group_description") or spec["description"],
                                "independent": True})
+    if spec.get("opdashboard"):
+        t = registry.get("apprights")
+        for g in groups:
+            f = t.dir / f"{store.filename(t, {'groupname': g})}.json"
+            rights = store.load_json(f)["rights"] if f.exists() else {}   # grant-only: keep what is there
+            for app, opts in dashboard_rights(sec.get("dashboard_rights") or ["READ"]).items():
+                rights[app] = rights.get(app, []) + [o for o in opts if o not in rights.get(app, [])]
+            save("apprights", {"groupname": g, "rights": rights})
     db = spec.get("database")
     for q in queries.values():
         save("query", query_record(q, owner, db))
@@ -328,11 +338,6 @@ def manual_steps(spec: dict) -> list[str]:
     groups = [g.upper() for g in sec.get("groups") or []] or ["<each group that needs it>"]
     o = spec.get("opdashboard")
     steps = []
-    if o:
-        rights = "; ".join(f"{app}: {', '.join(opts)}" for app, opts in
-                           dashboard_rights(sec.get("dashboard_rights") or ["READ"]).items())
-        steps.append(f"Security Groups > {', '.join(groups)} > Applications: grant {rights} "
-                     "(REST rejects these app types; without the object structure READs cards show BMXAA0024E)")
     for g in groups:
         if o:
             steps.append(f"Security Groups > {g} > Operational Dashboard tab > Select Dashboards: add '{o['title']}' "

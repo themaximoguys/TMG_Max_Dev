@@ -62,7 +62,7 @@ def build_where(t: registry.ArtifactType, names: list[str] | None, like: str | N
 def extract(s: Session, type_id: str, names: list[str] | None = None, like: str | None = None,
             where: str | None = None, limit: int | None = None) -> dict:
     t = registry.get(type_id)
-    if not t.os:
+    if not t.os or t.handler == "sigauth":
         return {"type": t.id, "skipped": f"handler={t.handler}: {t.note}"}
     os_name = s.os_for(t)
     w = build_where(t, names, like, where)
@@ -201,6 +201,8 @@ def deploy(s: Session, items: list[tuple], apply: bool = False, force_replace: b
                 res["os"] = os_name
                 if t.handler == "appxml":
                     res.update(_deploy_appxml(s, os_name, rec, apply, force_replace, stamp))
+                elif t.handler == "sigauth":
+                    res.update(_deploy_sigauth(s, os_name, rec, apply))
                 elif not apply:
                     hits = s.client.find(os_name, res["key"])
                     res["action"] = ("would-" + ("replace" if t.handler == "replace" else "update")) if hits else "would-create"
@@ -266,6 +268,44 @@ def _deploy_appxml(s, os_name, rec, apply, force_replace, stamp) -> dict:
     return out
 
 
+def _sigauth_missing(s, os_name: str, rec: dict) -> tuple[str, dict[str, list[str]]]:
+    """(group href, {app: [options the file grants that the group does not hold yet]})."""
+    hits = s.client.find(os_name, {"groupname": rec["groupname"]})
+    if not hits:
+        raise MaximoError(404, f"security group {rec['groupname']} not found; deploy it first", os_name)
+    href, missing = hits[0]["href"], {}
+    for app, opts in rec["rights"].items():
+        r = s.client.request("GET", f"{href}/maxappsall", params={
+            "lean": 1, "oslc.select": "app,sigoption{optionname,authorized}", "oslc.where": f'app="{app}"'})
+        rows = (r.get("member") or [{}])[0].get("sigoption") or []
+        held = {x["optionname"]: x.get("authorized") for x in rows}
+        unknown = [o for o in opts if o not in held]
+        if unknown:
+            raise MaximoError(400, f"{app} has no sig option(s) {unknown} on this tenant", os_name)
+        if need := [o for o in opts if not held[o]]:
+            missing[app] = need
+    return href, missing
+
+
+def _deploy_sigauth(s, os_name, rec, apply) -> dict:
+    """Grant-only: MERGE authorized=true for missing options, then read back. Never revokes."""
+    if not apply and not s.client.find(os_name, {"groupname": rec["groupname"]}):
+        # group is created earlier in this same deploy: everything listed would be granted
+        return {"missing": rec["rights"], "action": "would-grant"}
+    href, missing = _sigauth_missing(s, os_name, rec)
+    out = {"missing": missing}
+    if not missing:
+        return {**out, "action": "unchanged"}
+    if not apply:
+        return {**out, "action": "would-grant"}
+    s.client.merge(href, {"maxapps": [{"app": a, "sigoption": [{"optionname": o, "authorized": True} for o in opts]}
+                                      for a, opts in missing.items()]})
+    _, still = _sigauth_missing(s, os_name, rec)
+    if still:
+        raise MaximoError(500, f"read-back: still not granted {still}", os_name)
+    return {**out, "action": "granted"}
+
+
 # ── diff / drift ───────────────────────────────────────────────────────────
 def _drop_empty(node):
     """null, [] and {} mean the same thing to Maximo; never report them as a change."""
@@ -306,6 +346,12 @@ def diff(s: Session, items: list[tuple], full: bool = False) -> dict:
                 out.append({"file": rel, "status": "missing-live" if live is None else
                             ("same" if ax.fingerprints(live) == ax.fingerprints(rec["presentation"]) else "changed"),
                             "compare": ax.compare(live, rec["presentation"]) if live else None})
+                continue
+            if t.handler == "sigauth":
+                _, missing = _sigauth_missing(s, os_name, rec)
+                out.append({"file": rel, "status": "changed" if missing else "same",
+                            "diff": "\n".join(f"+ {a}: {', '.join(o)} (not granted on {s.env})"
+                                              for a, o in missing.items())})
                 continue
             key = store.key_of(t, rec) if t.handler != "autoscript" else {"autoscript": rec["autoscript"]}
             hits = s.client.find(os_name, key, select=t.select if t.select != "*" else "*")

@@ -31,6 +31,7 @@ Route column key:
 | 2 | App Designer screens (incl. LIBRARY, LOOKUPS) | `07-app-designer/*.xml` | XML | REST `MXAPIPRESENTATION` (merge-safe) | Extract falls back to `TMG_EXPORT_PRES` |
 | 2 | App descriptions | `07-app-designer/_apps` | JSON | REST | verify |
 | 2 | Conditional UI | `07-app-designer/_conditional-ui` | JSON | REST-replace `TMGMXAPICONDPROP` | 3-level tree |
+| 2 | App / object-structure rights per group | `02-security/app-rights` | JSON | REST `MXAPIGROUP` (maxapps sig options) | Grant-only; works for APP/OS-type apps the `grant` type cannot write |
 | 2 | Saved queries | `07-app-designer/_queries` | JSON | REST `MXAPIQUERY` | queryid left out (generated) |
 | 2 | Work queues | `07-app-designer/_workqueues` | JSON | REST-replace `MXAPIWORKQUEUE` | columns/actions are child rows |
 | 2 | KPIs | `19-kpi` | JSON | REST `MXAPIKPIMAIN` | Definition fields only; calculated values left out |

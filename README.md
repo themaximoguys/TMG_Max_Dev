@@ -17,7 +17,7 @@ this tool refuses to write to them.
 
 ```
  you / agent  ──► maxdev CLI ─┐
-                              ├─► engine ─► registry.yaml (45 artifact types)
+                              ├─► engine ─► registry.yaml (46 artifact types)
  MCP client  ───► MCP server ─┘     │
                                     ├─► Manage JSON API  /maximo/api/os/* , /api/script/*
                                     └─► IBM Maximo MCP server (MAS 9.2, optional)
@@ -58,9 +58,9 @@ maxdev dbconfig status                      # objects with unapplied Database Co
 ## Dashboards
 
 One YAML spec (`catalog/dashboards/`) builds an Operational Dashboard view and/or a
-start center, plus the security group, saved queries, KPIs and work queues behind them.
+start center, plus the security group and its rights, saved queries, KPIs and work queues behind them.
 The generated manifest deploys them in order and lists the steps no API covers
-(group assignment, dashboard rights, cards). See
+(group assignment, cards). See
 [skills/maximo-dev/references/dashboards.md](skills/maximo-dev/references/dashboards.md).
 
 ```bash
@@ -108,7 +108,7 @@ No credentials or default tenant are embedded in shared client configuration.
 
 ## Status
 
-**Live on the TMG demo (MAS 9):** `maxdev doctor` reports 40 of the 42 REST areas `ok` (SLAs and response plans have no structure there; 3 more areas are manual by design), and the bootstrap structures are installed. A sample dashboard (11 records, including an Operational Dashboard view) is deployed and re-diffs `same`. Write path proven: bootstrap created 16 records, and the export script was updated and verified live. On a new tenant, dry-run and obtain approval before applying: `maxdev bootstrap authapps --apply` sets the authorisation app on 6 IBM MX\* structures; then `maxdev bootstrap --apply` creates 10 TMG structures, only for areas that have no REST-usable IBM structure.
+**Live on the TMG demo (MAS 9):** `maxdev doctor` reports 41 of the 43 REST areas `ok` (SLAs and response plans have no structure there; 3 more areas are manual by design), and the bootstrap structures are installed. A sample dashboard (12 records, including an Operational Dashboard view and its group rights) is deployed and re-diffs `same`. Write path proven: bootstrap created 16 records, and the export script was updated and verified live. On a new tenant, dry-run and obtain approval before applying: `maxdev bootstrap authapps --apply` sets the authorisation app on 6 IBM MX\* structures; then `maxdev bootstrap --apply` creates 10 TMG structures, only for areas that have no REST-usable IBM structure.
 
 
 The engine, formats and safety rules are tested offline (run the test command for the current count). These items still need a live check on a TMG tenant:

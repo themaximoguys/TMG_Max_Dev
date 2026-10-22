@@ -1,0 +1,26 @@
+{
+  "groupname": "TMGOPSSUP",
+  "rights": {
+    "MXAPIKPIMAIN": [
+      "READ"
+    ],
+    "MXAPIPERSON": [
+      "READ"
+    ],
+    "MXAPIVIEWMANAGER": [
+      "READ",
+      "SAVE",
+      "INSERT"
+    ],
+    "MXAPIWFASSIGNMENT": [
+      "READ"
+    ],
+    "MXAPIWORKQUEUE": [
+      "READ"
+    ],
+    "OPDASHBOARD": [
+      "READ",
+      "INSERT_PRIVATE"
+    ]
+  }
+}

@@ -331,8 +331,8 @@ class DashboardTests(Base):
         self.assertEqual(types.count("query"), 3)
         self.assertEqual(types.count("kpi"), 3)
         self.assertEqual(types.count("workqueue"), 2)
-        self.assertEqual(types[0], "securitygroup")
-        self.assertNotIn("grant", types, "OPDASHBOARD/OS grants are rejected over REST; manual step instead")
+        self.assertEqual(types[:2], ["securitygroup", "apprights"])
+        self.assertNotIn("grant", types, "APPLICATIONAUTH rejects OPDASHBOARD/OS apps; apprights uses MXAPIGROUP")
         self.assertEqual(types[-2:], ["view", "startcenter"])
         q = json.loads((registry.SRC / "07-app-designer/_queries/WOTRACK__TMG_OPS_OVERDUE_WO.json").read_text())
         self.assertEqual((q["app"], q["owner"]), ("WOTRACK", "MAXADMIN"))
@@ -352,7 +352,10 @@ class DashboardTests(Base):
         self.assertEqual(len(m["items"][0]["path"]), len(r["files"]))
         self.assertTrue(any("Start Center Template" in x for x in m["manual"]))
         self.assertTrue(any("Operational Dashboard tab" in x for x in m["manual"]))
-        self.assertTrue(any("OPDASHBOARD: READ, INSERT_PRIVATE" in x and "MXAPIKPIMAIN: READ" in x for x in m["manual"]))
+        self.assertFalse(any("Applications: grant" in x for x in m["manual"]), "rights are deployed, not manual")
+        r = json.loads((registry.SRC / "02-security/app-rights/TMGOPSSUP.json").read_text())["rights"]
+        self.assertEqual(r["OPDASHBOARD"], ["READ", "INSERT_PRIVATE"])
+        self.assertEqual(r["MXAPIVIEWMANAGER"], ["READ", "SAVE", "INSERT"])
         self.assertTrue(any("KPICronTask" in x for x in m["manual"]), "trend KPI needs the cron step")
         again = self.dash.build("maintenance_supervisor")
         self.assertFalse(any(f["changed"] for f in again["files"]), "rebuild of an unchanged spec must not rewrite")
@@ -388,7 +391,8 @@ class DashboardTests(Base):
         self.assertLess(max(i for i, t in enumerate(order) if t == "kpi"), order.index("startcenter"))
         self.assertLess(max(i for i, t in enumerate(order) if t == "workqueue"), order.index("view"))
         dry = engine.deploy(self.s, manifest.items(m))
-        self.assertEqual({r["action"] for r in dry["results"]}, {"would-create"})
+        self.assertEqual({r["action"] for r in dry["results"] if r["type"] != "apprights"}, {"would-create"})
+        self.assertEqual(next(r for r in dry["results"] if r["type"] == "apprights")["action"], "would-grant")
         keys = {r["type"]: r["key"] for r in dry["results"]}
         self.assertEqual(keys["startcenter"], {"contentuid": "TMG_OPS_SUPERVISOR"})
         self.assertEqual(keys["view"]["viewid"], "TMGOPSSUPERVISOR")
@@ -419,12 +423,75 @@ class DashboardTests(Base):
         for app in self.dash.CARD_SOURCES:
             self.assertIn("READ", r[app])
 
+    def test_rebuild_keeps_rights_added_by_hand(self):
+        self.dash.build("maintenance_supervisor", write_manifest=False)
+        f = registry.SRC / "02-security/app-rights/TMGOPSSUP.json"
+        rec = json.loads(f.read_text())
+        rec["rights"]["WOTRACK"] = ["READ"]
+        f.write_text(json.dumps(rec))
+        self.dash.build("maintenance_supervisor", write_manifest=False)
+        self.assertEqual(json.loads(f.read_text())["rights"]["WOTRACK"], ["READ"])
+
     def test_opdashboard_only_spec_needs_no_portlets(self):
         spec = self.dash.load_spec("maintenance_supervisor")
         spec.pop("portlets")
         self.assertEqual(self.dash.validate(spec), [])
         spec["opdashboard"]["kpis"] = ["NOPE"]
         self.assertTrue(any("opdashboard.kpis" in e for e in self.dash.validate(spec)))
+
+
+class SigauthTests(unittest.TestCase):
+    """Grant-only rights through MXAPIGROUP maxapps: one MERGE for what is missing, read back, never revoke."""
+
+    class Client:
+        def __init__(self, held):
+            self.held = held                    # {app: {option: authorized}}
+            self.merges = []
+
+        def find(self, os_name, key, select=""):
+            return [{"href": "G"}] if key["groupname"] == "TMGOPSSUP" else []
+
+        def request(self, method, href, params=None, **kw):
+            app = params["oslc.where"].split('"')[1]
+            return {"member": [{"sigoption": [{"optionname": o, "authorized": a}
+                                              for o, a in self.held.get(app, {}).items()]}]}
+
+        def merge(self, href, body):
+            self.merges.append(body)
+            for m in body["maxapps"]:
+                for so in m["sigoption"]:
+                    self.held[m["app"]][so["optionname"]] = True
+
+    REC = {"groupname": "TMGOPSSUP", "rights": {"OPDASHBOARD": ["READ", "INSERT_PRIVATE"]}}
+
+    def session(self, held):
+        return type("S", (), {"client": self.Client(held), "env": "t"})()
+
+    def test_dry_run_reports_missing_only(self):
+        s = self.session({"OPDASHBOARD": {"READ": True, "INSERT_PRIVATE": False, "DELETE_PUBLIC": True}})
+        r = engine._deploy_sigauth(s, "MXAPIGROUP", self.REC, apply=False)
+        self.assertEqual((r["action"], r["missing"]), ("would-grant", {"OPDASHBOARD": ["INSERT_PRIVATE"]}))
+        self.assertEqual(s.client.merges, [])
+
+    def test_apply_grants_missing_and_never_revokes(self):
+        s = self.session({"OPDASHBOARD": {"READ": False, "INSERT_PRIVATE": False, "DELETE_PUBLIC": True}})
+        r = engine._deploy_sigauth(s, "MXAPIGROUP", self.REC, apply=True)
+        self.assertEqual(r["action"], "granted")
+        sent = s.client.merges[0]["maxapps"][0]["sigoption"]
+        self.assertEqual({x["optionname"] for x in sent}, {"READ", "INSERT_PRIVATE"})
+        self.assertTrue(all(x["authorized"] is True for x in sent))
+        self.assertTrue(s.client.held["OPDASHBOARD"]["DELETE_PUBLIC"], "unlisted rights untouched")
+        self.assertEqual(engine._deploy_sigauth(s, "MXAPIGROUP", self.REC, apply=True)["action"], "unchanged")
+
+    def test_unknown_option_and_missing_group_refused(self):
+        s = self.session({"OPDASHBOARD": {"READ": False}})
+        with self.assertRaisesRegex(Exception, "no sig option"):
+            engine._deploy_sigauth(s, "MXAPIGROUP", self.REC, apply=False)
+        new = {"groupname": "NOPE", "rights": {"OPDASHBOARD": ["READ"]}}
+        self.assertEqual(engine._deploy_sigauth(s, "MXAPIGROUP", new, apply=False)["action"], "would-grant",
+                         "dry run: group is created earlier in the same deploy")
+        with self.assertRaisesRegex(Exception, "not found"):
+            engine._deploy_sigauth(s, "MXAPIGROUP", new, apply=True)
 
 
 def yaml_load(path):

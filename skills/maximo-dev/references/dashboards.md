@@ -12,7 +12,7 @@ Manage has two dashboard front ends. Both read the same building blocks:
 | Component | Feeds | Repo type / folder | REST |
 |---|---|---|---|
 | Security group (optional) | who sees it | `securitygroup` → `02-security/groups` | ok |
-| Rights: OPDASHBOARD sig options, plus READ on MXAPIVIEWMANAGER, MXAPIWORKQUEUE, MXAPIWFASSIGNMENT, MXAPIPERSON and MXAPIKPIMAIN | without them, cards come up empty (BMXAA0024E) | manifest `manual:` step listing the exact rights | **no**: APPLICATIONAUTH rejects APP/OS-type apps (BMXAA4191E on demo) |
+| Rights: OPDASHBOARD sig options, plus READ on MXAPIVIEWMANAGER, MXAPIWORKQUEUE, MXAPIWFASSIGNMENT, MXAPIPERSON and MXAPIKPIMAIN | without them, cards come up empty (BMXAA0024E) | `apprights` → `02-security/app-rights` (grant-only, never revokes) | ok (demo), through MXAPIGROUP maxapps; the `grant` type's APPLICATIONAUTH route rejects these apps (BMXAA4191E) |
 | Saved queries | result sets, work queues | `query` → `07-app-designer/_queries` | ok |
 | KPIs | KPI cards and portlets | `kpi` → `19-kpi` | ok |
 | Work queues (+ columns, actions) | work queue, map and table cards | `workqueue` → `07-app-designer/_workqueues` | ok (demo) |

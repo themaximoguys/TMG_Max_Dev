@@ -4,6 +4,7 @@ description: 'Dashboard: TMG Maintenance Supervisor'
 items:
 - path:
   - src/02-security/groups/TMGOPSSUP.json
+  - src/02-security/app-rights/TMGOPSSUP.json
   - src/07-app-designer/_queries/WOTRACK__TMG_OPS_OVERDUE_WO.json
   - src/07-app-designer/_queries/WOTRACK__TMG_OPS_EMERGENCY_WO.json
   - src/07-app-designer/_queries/WOTRACK__TMG_OPS_WAITING_MATERIAL.json
@@ -15,9 +16,6 @@ items:
   - src/07-app-designer/_views/OPDASHBOARD__NX_PV__TMGOPSSUPERVISOR.json
   - src/07-app-designer/_startcenters/TMG_OPS_SUPERVISOR.json
 manual:
-- 'Security Groups > TMGOPSSUP > Applications: grant OPDASHBOARD: READ, INSERT_PRIVATE; MXAPIVIEWMANAGER: READ,
-  SAVE, INSERT; MXAPIWORKQUEUE: READ; MXAPIWFASSIGNMENT: READ; MXAPIPERSON: READ; MXAPIKPIMAIN: READ (REST rejects
-  these app types; without the object structure READs cards show BMXAA0024E)'
 - 'Security Groups > TMGOPSSUP > Operational Dashboard tab > Select Dashboards: add ''TMG Operations Supervisor''
   (viewid TMGOPSSUPERVISOR); this writes DASHBOARDAUTH'
 - 'Security Groups > TMGOPSSUP: set Start Center Template to ''TMG Maintenance Supervisor'' (contentuid TMG_OPS_SUPERVISOR);

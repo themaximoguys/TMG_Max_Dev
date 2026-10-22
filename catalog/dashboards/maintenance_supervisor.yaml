@@ -17,7 +17,7 @@ security:
   groups: [TMGOPSSUP]               # groups that get the dashboard (grants + manual assignment steps)
   create_group: true                # create the first group (independent, no users) — omit for existing groups
   group_description: TMG Operations Supervisor
-  dashboard_rights: [READ, INSERT_PRIVATE]   # OPDASHBOARD sig options; the manifest lists them plus the card structure READs
+  dashboard_rights: [READ, INSERT_PRIVATE]   # OPDASHBOARD sig options; card object-structure READs are added for you
 
 # Operational Dashboard view. Cards: build them once in the app, extract the view, then set cards_from.
 opdashboard:
