@@ -1,9 +1,14 @@
 # TMG Maximo Development (`maxdev`)
 
-Code-managed IBM Maximo / MAS 9 Manage development. Every configuration and
-code artifact lives in Git as one reviewable file. It is pulled from and pushed
-to Maximo **through Maximo's own APIs**, from either a CLI or an MCP server, so
-any coding agent (CLI or MCP client) can do the same work you do.
+Code-managed, AI-assisted IBM Maximo / MAS 9 Manage development. Every
+configuration and code artifact lives in Git as one reviewable file. It is pulled
+from and pushed to Maximo **through Maximo's own APIs**, from either a CLI or an
+MCP server, so any coding agent (CLI or MCP client) can do the same work you do.
+
+What it builds and deploys: Database Configuration, domains, App Designer screens,
+automation scripts (from TMG templates, with Java/TRM conversion), workflows,
+security, integration, KPIs, work queues, and **operations dashboards** —
+Operational Dashboard views and start centers built from one YAML spec.
 
 This repo deliberately contains **no CI/CD or pipelines**. It is the development
 layer: extract, edit, diff, deploy to DEV, verify. Promotion beyond DEV is a
@@ -12,7 +17,7 @@ this tool refuses to write to them.
 
 ```
  you / agent  ──► maxdev CLI ─┐
-                              ├─► engine ─► registry.yaml (41 artifact types)
+                              ├─► engine ─► registry.yaml (45 artifact types)
  MCP client  ───► MCP server ─┘     │
                                     ├─► Manage JSON API  /maximo/api/os/* , /api/script/*
                                     └─► IBM Maximo MCP server (MAS 9.2, optional)
@@ -50,6 +55,20 @@ maxdev deploy --manifest WO-CUSTOMER-EMAIL --apply
 maxdev dbconfig status                      # objects with unapplied Database Configuration
 ```
 
+## Dashboards
+
+One YAML spec (`catalog/dashboards/`) builds an Operational Dashboard view and/or a
+start center, plus the security group, saved queries, KPIs and work queues behind them.
+The generated manifest deploys them in order and lists the steps no API covers
+(group assignment, dashboard rights, cards). See
+[skills/maximo-dev/references/dashboards.md](skills/maximo-dev/references/dashboards.md).
+
+```bash
+maxdev dashboard check maintenance_supervisor
+maxdev dashboard build maintenance_supervisor       # src/ files + manifests/TMG_OPS_SUPERVISOR.yaml
+maxdev deploy --manifest TMG_OPS_SUPERVISOR --env demo   # dry run; --apply after approval
+```
+
 Deploy rules:
 - Deploy always runs in dependency order (layer 0 foundation → 11 reporting) and stops at the first failure. Maximo config writes are not a transaction, so the receipt in `.maxdev/receipts/` records exactly what landed.
 - Upserts look a record up by its key, then merge into it or create it. A key that matches more than one record is refused rather than guessed.
@@ -65,14 +84,15 @@ Deploy rules:
 |---|---|
 | `src/NN-*/` | Artifacts, one file per record, a folder per area (see [docs/COVERAGE.md](docs/COVERAGE.md)) |
 | `manifests/*.yaml` | Change sets: one per feature/ticket, including manual steps |
+| `catalog/dashboards/*.yaml` | Dashboard specs for `maxdev dashboard` |
 | `src/00_predeployment/` | **Deploy first, once per environment.** TMG helper object structures + `TMG_EXPORT_PRES` script (see its README) |
-| `maxdev/` | Engine, CLI, MCP server, IBM MCP client, script builder. `registry.yaml` drives everything |
+| `maxdev/` | Engine, CLI, MCP server, IBM MCP client, script and dashboard builders. `registry.yaml` drives everything |
 | `catalog/` | TMG script templates (28) and samples (69), from TMG_MAX_CODE (MIT) |
 | `docs/standards/` | TMG_AUTOSCRIPT_STANDARDS.md (authoritative) |
 | `docs/autoscript/` | Patterns, naming, error handling, launch points, Java/TRM conversion guides, knowledge base |
 | `postman/collections/` | Generic MAS 9 config + App Designer collections, for manual API exploration |
 | `docs/` | Coverage map, application development, IBM tooling, API notes, standards |
-| `skills/` | `maximo-dev`, `create-automation-script`, `convert-java-to-script`, `convert-trm-to-script`, `maximo-workflow` |
+| `skills/` | `maximo-dev`, `maximo-dev-engine`, `create-automation-script`, `convert-java-to-script`, `convert-trm-to-script`, `maximo-workflow` |
 | `tests/` | Offline tests against an in-memory fake Manage API (`python3 -m unittest discover -s tests`) |
 
 ## MCP
@@ -88,7 +108,7 @@ No credentials or default tenant are embedded in shared client configuration.
 
 ## Status
 
-**Live on the TMG demo (MAS 9):** 39 of 41 areas pass extract → diff against real data, and the bootstrap structures are installed. Write path proven: bootstrap created 16 records, and the export script was updated and verified live. On a new tenant, dry-run and obtain approval before applying: `maxdev bootstrap authapps --apply` sets the authorisation app on 6 IBM MX\* structures; then `maxdev bootstrap --apply` creates 10 TMG structures, only for areas that have no REST-usable IBM structure.
+**Live on the TMG demo (MAS 9):** `maxdev doctor` reports 40 of the 42 REST areas `ok` (SLAs and response plans have no structure there; 3 more areas are manual by design), and the bootstrap structures are installed. A sample dashboard (11 records, including an Operational Dashboard view) is deployed and re-diffs `same`. Write path proven: bootstrap created 16 records, and the export script was updated and verified live. On a new tenant, dry-run and obtain approval before applying: `maxdev bootstrap authapps --apply` sets the authorisation app on 6 IBM MX\* structures; then `maxdev bootstrap --apply` creates 10 TMG structures, only for areas that have no REST-usable IBM structure.
 
 
 The engine, formats and safety rules are tested offline (run the test command for the current count). These items still need a live check on a TMG tenant:
