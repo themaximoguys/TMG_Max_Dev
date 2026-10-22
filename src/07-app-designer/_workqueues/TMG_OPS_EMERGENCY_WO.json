@@ -1,0 +1,35 @@
+{
+  "app": "WOTRACK",
+  "clausename": "WOTRACK:TMG OPS EMERGENCY WO",
+  "description": "Open emergency work",
+  "intobjectname": "MXAPIWODETAIL",
+  "isactive": true,
+  "langcode": "EN",
+  "owner": "MAXADMIN",
+  "queuename": "TMG OPS EMERGENCY WO",
+  "queuetype": "RESULTSET",
+  "uniquecolumnname": "WORKORDERID",
+  "workqueueactions": [],
+  "workqueuecols": [
+    {
+      "attributename": "ASSETNUM",
+      "columnorder": 4
+    },
+    {
+      "attributename": "DESCRIPTION",
+      "columnorder": 2
+    },
+    {
+      "attributename": "LOCATION",
+      "columnorder": 5
+    },
+    {
+      "attributename": "STATUS",
+      "columnorder": 3
+    },
+    {
+      "attributename": "WONUM",
+      "columnorder": 1
+    }
+  ]
+}

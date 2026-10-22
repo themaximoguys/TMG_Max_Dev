@@ -1,4 +1,5 @@
-# Operational dashboard spec: Maintenance Supervisor start center.
+# Dashboard spec: Maintenance Supervisor. Builds both front ends from shared records:
+#   Operational Dashboard (OPDASHBOARD) view TMGOPSSUPERVISOR + start center TMG_OPS_SUPERVISOR.
 #   maxdev dashboard check maintenance_supervisor     validate only
 #   maxdev dashboard build maintenance_supervisor     write src/ files + manifests/TMG_OPS_SUPERVISOR.yaml
 #   maxdev deploy --manifest TMG_OPS_SUPERVISOR --env demo   dry run; add --apply after review
@@ -11,7 +12,22 @@ name: TMG_OPS_SUPERVISOR            # start center contentuid; also the manifest
 description: TMG Maintenance Supervisor
 owner: MAXADMIN                     # owner of the saved queries the portlets read
 database: sqlserver                 # sqlserver | oracle | db2 — sets what {now} becomes
-groups: []                          # security groups to give this start center (manual step in the manifest)
+
+security:
+  groups: [TMGOPSSUP]               # groups that get the dashboard (grants + manual assignment steps)
+  create_group: true                # create the first group (independent, no users) — omit for existing groups
+  group_description: TMG Operations Supervisor
+  dashboard_rights: [READ, INSERT_PRIVATE]   # OPDASHBOARD sig options; the manifest lists them plus the card structure READs
+
+# Operational Dashboard view. Cards: build them once in the app, extract the view, then set cards_from.
+opdashboard:
+  id: TMGOPSSUPERVISOR              # VIEWMANAGER viewid
+  title: TMG Operations Supervisor  # dashboard tab name
+  owner: MAXADMIN
+  public: true
+  kpis: [TMGOPSBACKLOG, TMGOPSOVERDUE, TMGOPSEMERG]        # cards to add: KPI value / comparison / trend
+  workqueues: [TMG OPS OVERDUE WO, TMG OPS EMERGENCY WO]   # cards to add: work queues (single or multiple)
+  # cards_from: src/07-app-designer/_views/OPDASHBOARD__NX_PV__TMGOPSSUPERVISOR.json
 
 queries:
   - name: TMG OPS OVERDUE WO
@@ -46,6 +62,7 @@ kpis:
     format: DECIMAL
     target: 50
     caution: [60, 80]
+    trend: true                     # KPIHISTORY for the trend card (needs KPICronTask, see manifest)
   - name: TMGOPSOVERDUE
     description: Overdue open work orders
     select: select count(*) from workorder
@@ -73,7 +90,15 @@ workqueues:
     object_structure: MXAPIWODETAIL
     unique_column: WORKORDERID
     columns: [WONUM, DESCRIPTION, STATUS, WOPRIORITY, TARGCOMPDATE]
+    actions: [{action: WO COMP, label: Complete, completes: true}]   # Actions app records
+  - name: TMG OPS EMERGENCY WO
+    description: Open emergency work
+    query: TMG OPS EMERGENCY WO
+    object_structure: MXAPIWODETAIL
+    unique_column: WORKORDERID
+    columns: [WONUM, DESCRIPTION, STATUS, ASSETNUM, LOCATION]
 
+# Start center portlets.
 # column 0 = left (narrow), 1 = right (wide) with layout NW; order within a column follows this list.
 portlets:
   - type: kpilist

@@ -235,8 +235,7 @@ types:
     key: [queuename]
     folder: 07-app-designer/_workqueues
     handler: replace
-    select: "queuename,description,app,owner,queuetype,clausename,intobjectname,uniquecolumnname,isactive,langcode,workqueuecols{attributename,columnorder},workqueueactions{action,actionlabel,actionorder}"
-    status: verify
+    select: "queuename,description,app,owner,queuetype,clausename,intobjectname,uniquecolumnname,isactive,priority,langcode,workqueuecols{attributename,columnorder},workqueueactions{action,actionlabel,actionorder,completes,conditionnum}"
     note: Columns and actions are child rows, so the queue is replaced whole. A RESULTSET queue names its saved query as APP:CLAUSENAME (e.g. WOTRACK:WO_OWNED_BY_ME); the query deploys first.
 
   - id: kpi
@@ -268,7 +267,6 @@ types:
     name: [app, componentid, viewid]
     handler: json
     select: "app,componentid,viewid,viewname,description,viewtype,userid,ispublic,isdefault,content"
-    status: verify
     note: OPDASHBOARD rows (viewtype DASHBOARD) are Operational Dashboard layouts; other rows are saved table views in role-based apps. content is the app's own JSON, stored as a string. Group access (DASHBOARDAUTH) is set in the Operational Dashboard app.
 
   # ── Layer 3 ──────────────────────────────────────────────────────────────

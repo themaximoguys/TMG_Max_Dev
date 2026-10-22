@@ -57,6 +57,6 @@ On MAS 9, `mxe.int.enableosauth=1` means an object structure only works over RES
 ## Workflows, dashboards, Database Configuration, IBM MCP
 
 - **Workflows.** Generate with the `maximo-workflow` skill and save under `src/13-workflows/`. Person groups, roles and actions go in their own folders, and the manifest deploys them together.
-- **Operational dashboards (start centers, result sets, KPIs, work queues).** Write a spec in `catalog/dashboards/`, then run `maxdev dashboard check|build <spec>` (MCP `build_dashboard`) and deploy the generated manifest. Read `references/dashboards.md` first.
+- **Dashboards (Operational Dashboard views and start centers, plus their groups, grants, queries, KPIs and work queues).** Write a spec in `catalog/dashboards/`, then run `maxdev dashboard check|build <spec>` (MCP `build_dashboard`) and deploy the generated manifest. Read `references/dashboards.md` first: card JSON is captured from the app, not hand-written.
 - **Database Configuration.** After deploying `object` changes, run `maxdev dbconfig status`. Structural changes need Admin Mode, which logs users out, so ask before `dbconfig apply --admin --apply`.
 - **IBM MCP server (MAS 9.2, partial feature set).** Use `maxdev ibm-mcp tools --env X` or `ibm_mcp_tools` / `ibm_mcp_call`. Tools that aren't marked read-only need `apply`. Treat results as something to verify.

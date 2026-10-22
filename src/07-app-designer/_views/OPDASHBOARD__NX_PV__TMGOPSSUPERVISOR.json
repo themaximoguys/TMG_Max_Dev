@@ -1,0 +1,12 @@
+{
+  "app": "OPDASHBOARD",
+  "componentid": "NX_PV",
+  "content": "{\"delta\":{\"cards\":[],\"layouts\":{}},\"viewName\":\"TMG Operations Supervisor\",\"isDefault\":false,\"isPublic\":true,\"description\":\"TMG Maintenance Supervisor\"}",
+  "description": "TMG Maintenance Supervisor",
+  "isdefault": false,
+  "ispublic": true,
+  "userid": "MAXADMIN",
+  "viewid": "TMGOPSSUPERVISOR",
+  "viewname": "TMG Operations Supervisor",
+  "viewtype": "DASHBOARD"
+}

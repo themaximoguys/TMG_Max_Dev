@@ -9,7 +9,14 @@
   "queuename": "TMG OPS OVERDUE WO",
   "queuetype": "RESULTSET",
   "uniquecolumnname": "WORKORDERID",
-  "workqueueactions": [],
+  "workqueueactions": [
+    {
+      "action": "WO COMP",
+      "actionlabel": "Complete",
+      "actionorder": 1,
+      "completes": true
+    }
+  ],
   "workqueuecols": [
     {
       "attributename": "DESCRIPTION",

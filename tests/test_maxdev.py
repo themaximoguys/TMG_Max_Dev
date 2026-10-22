@@ -295,7 +295,8 @@ class BuilderTests(unittest.TestCase):
 
 
 class DashboardTests(Base):
-    STRUCTS = Base.STRUCTS + ("MXAPIQUERY", "MXAPIKPIMAIN", "MXAPIWORKQUEUE", "TMGMXSCTEMPLATE")
+    STRUCTS = Base.STRUCTS + ("MXAPIQUERY", "MXAPIKPIMAIN", "MXAPIWORKQUEUE", "TMGMXSCTEMPLATE",
+                              "MXAPIVIEWMANAGER", "MXAPIGROUP")
 
     def setUp(self):
         super().setUp()
@@ -329,8 +330,10 @@ class DashboardTests(Base):
         types = [f["type"] for f in r["files"]]
         self.assertEqual(types.count("query"), 3)
         self.assertEqual(types.count("kpi"), 3)
-        self.assertEqual(types.count("workqueue"), 1)
-        self.assertEqual(types[-1], "startcenter")
+        self.assertEqual(types.count("workqueue"), 2)
+        self.assertEqual(types[0], "securitygroup")
+        self.assertNotIn("grant", types, "OPDASHBOARD/OS grants are rejected over REST; manual step instead")
+        self.assertEqual(types[-2:], ["view", "startcenter"])
         q = json.loads((registry.SRC / "07-app-designer/_queries/WOTRACK__TMG_OPS_OVERDUE_WO.json").read_text())
         self.assertEqual((q["app"], q["owner"]), ("WOTRACK", "MAXADMIN"))
         self.assertNotIn("queryid", q)
@@ -348,6 +351,9 @@ class DashboardTests(Base):
         m = yaml_load(self.dash.MANIFESTS / "TMG_OPS_SUPERVISOR.yaml")
         self.assertEqual(len(m["items"][0]["path"]), len(r["files"]))
         self.assertTrue(any("Start Center Template" in x for x in m["manual"]))
+        self.assertTrue(any("Operational Dashboard tab" in x for x in m["manual"]))
+        self.assertTrue(any("OPDASHBOARD: READ, INSERT_PRIVATE" in x and "MXAPIKPIMAIN: READ" in x for x in m["manual"]))
+        self.assertTrue(any("KPICronTask" in x for x in m["manual"]), "trend KPI needs the cron step")
         again = self.dash.build("maintenance_supervisor")
         self.assertFalse(any(f["changed"] for f in again["files"]), "rebuild of an unchanged spec must not rewrite")
 
@@ -377,11 +383,48 @@ class DashboardTests(Base):
         from maxdev import manifest
         m = manifest.load(str(self.dash.MANIFESTS / "TMG_OPS_SUPERVISOR.yaml"))
         order = [t.id for t, _ in manifest.items(m)]
-        self.assertEqual(order[-1], "startcenter")
+        self.assertEqual(order[0], "securitygroup")
         self.assertLess(max(i for i, t in enumerate(order) if t == "query"), order.index("workqueue"))
+        self.assertLess(max(i for i, t in enumerate(order) if t == "kpi"), order.index("startcenter"))
+        self.assertLess(max(i for i, t in enumerate(order) if t == "workqueue"), order.index("view"))
         dry = engine.deploy(self.s, manifest.items(m))
         self.assertEqual({r["action"] for r in dry["results"]}, {"would-create"})
-        self.assertEqual(dry["results"][-1]["key"], {"contentuid": "TMG_OPS_SUPERVISOR"})
+        keys = {r["type"]: r["key"] for r in dry["results"]}
+        self.assertEqual(keys["startcenter"], {"contentuid": "TMG_OPS_SUPERVISOR"})
+        self.assertEqual(keys["view"]["viewid"], "TMGOPSSUPERVISOR")
+
+    def test_opdashboard_view_matches_ootb_shape(self):
+        spec = self.dash.load_spec("maintenance_supervisor")
+        v = self.dash.view_record(spec)
+        self.assertEqual((v["app"], v["componentid"], v["viewtype"]), ("OPDASHBOARD", "NX_PV", "DASHBOARD"))
+        self.assertEqual(list(json.loads(v["content"])), ["delta", "viewName", "isDefault", "isPublic", "description"])
+        self.assertNotIn(" ", v["content"].split('"viewName"')[0], "compact JSON, as Maximo stores it")
+
+    def test_cards_from_carries_extracted_cards(self):
+        card = {"id": "c1", "type": "kpi-value", "kpi": "TMGOPSBACKLOG"}
+        ext = self.tmp / "view.json"
+        ext.write_text(json.dumps({"app": "OPDASHBOARD", "content": json.dumps(
+            {"delta": {"cards": [card], "layouts": {"lg": [{"i": "c1"}]}}})}))
+        spec = self.dash.load_spec("maintenance_supervisor")
+        spec["opdashboard"]["cards_from"] = str(ext)
+        delta = json.loads(self.dash.view_record(spec)["content"])["delta"]
+        self.assertEqual(delta, {"cards": [card], "layouts": {"lg": [{"i": "c1"}]}})
+        ext.write_text(json.dumps({"app": "WOTRACK", "content": "{}"}))
+        self.assertTrue(any("cards_from" in e for e in self.dash.validate(spec)))
+
+    def test_dashboard_rights_cover_card_sources(self):
+        r = self.dash.dashboard_rights(["READ", "INSERT_PUBLIC", "INSERT_PRIVATE"])
+        self.assertEqual(r["OPDASHBOARD"], ["READ", "INSERT_PUBLIC", "INSERT_PRIVATE"])
+        self.assertEqual(r["MXAPIVIEWMANAGER"], ["READ", "SAVE", "INSERT"], "SAVE before INSERT, no duplicates")
+        for app in self.dash.CARD_SOURCES:
+            self.assertIn("READ", r[app])
+
+    def test_opdashboard_only_spec_needs_no_portlets(self):
+        spec = self.dash.load_spec("maintenance_supervisor")
+        spec.pop("portlets")
+        self.assertEqual(self.dash.validate(spec), [])
+        spec["opdashboard"]["kpis"] = ["NOPE"]
+        self.assertTrue(any("opdashboard.kpis" in e for e in self.dash.validate(spec)))
 
 
 def yaml_load(path):

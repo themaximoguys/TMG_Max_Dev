@@ -196,8 +196,9 @@ def write_artifact(type_id: str, record: dict) -> str:
 
 @mcp.tool()
 def build_dashboard(spec: str, write_manifest: bool = True) -> str:
-    """Build an operational dashboard from a YAML spec (catalog/dashboards/<name>.yaml or a path): writes the
-    saved queries, KPIs, work queues and start center template into src/ plus manifests/<NAME>.yaml.
+    """Build a dashboard from a YAML spec (catalog/dashboards/<name>.yaml or a path): writes the security group,
+    grants, saved queries, KPIs, work queues, Operational Dashboard view and/or start center template into
+    src/ plus manifests/<NAME>.yaml (with the manual steps no API covers).
     Offline; deploy it with deploy(manifest_name=NAME) as a dry run first."""
     return _ok(dashboard.build(spec, write_manifest=write_manifest))
 

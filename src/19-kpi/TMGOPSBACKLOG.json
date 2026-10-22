@@ -9,5 +9,5 @@
   "realtime": true,
   "selectstmt": "select count(*) from workorder",
   "target": 50.0,
-  "trendenabled": false
+  "trendenabled": true
 }

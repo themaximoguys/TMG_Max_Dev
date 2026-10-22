@@ -21,7 +21,7 @@
   maxdev lint     [PATH ...]                  TMG standards check (default: all scripts in src/)
   maxdev java     analyze FILE.java [...]     which template / launch point a Java class converts to
   maxdev new      autoscript NAME --type object|attribute|action|library|... (minimal skeleton)
-  maxdev dashboard check|build SPEC           start center + queries + KPIs + work queues from a YAML spec
+  maxdev dashboard check|build SPEC           Operational Dashboard / start center + every supporting record
   maxdev bootstrap [authapps|generate] [--apply]  1) authapps: set auth app on IBM MX* structures
                                               2) deploy TMG structures only where none is REST-usable
   maxdev ibm-mcp  info | tools | call NAME [--args JSON] [--apply]   IBM MAS 9.2 MCP server
@@ -190,7 +190,7 @@ def main(argv=None) -> int:
                 return 1 if errs else 0
             r = dashboard.build(a.spec, write_manifest=not a.no_manifest)
             for f in r["files"]:
-                print(f"  {'written' if f['changed'] else 'same':<9}{f['type']:<13}{f['file']}")
+                print(f"  {'written' if f['changed'] else 'same':<9}{f['type']:<15}{f['file']}")
             if r.get("manifest"):
                 print(f"manifest {r['manifest']}  ->  maxdev deploy --manifest {spec['name']} --env ENV  (dry run)")
             return 0
