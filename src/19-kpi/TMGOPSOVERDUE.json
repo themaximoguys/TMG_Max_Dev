@@ -1,0 +1,13 @@
+{
+  "cautionmax": 20.0,
+  "cautionmin": 10.0,
+  "clause": "where historyflag = 0 and istask = 0 and status not in (select value from synonymdomain where domainid='WOSTATUS' and maxvalue in ('COMP','CLOSE','CAN')) and targcompdate < GETDATE()",
+  "description": "Overdue open work orders",
+  "format": "DECIMAL",
+  "ispublic": true,
+  "kpiname": "TMGOPSOVERDUE",
+  "realtime": true,
+  "selectstmt": "select count(*) from workorder",
+  "target": 5.0,
+  "trendenabled": false
+}

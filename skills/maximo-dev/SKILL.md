@@ -1,6 +1,6 @@
 ---
 name: maximo-dev
-description: How to do IBM Maximo / MAS 9 Manage development in the TMG_Max_Dev repo with the maxdev CLI (python3 -m maxdev) and the tmg-maximo-dev MCP server — connecting an environment, pulling (extracting) configuration into src/, editing it, diffing against live, and deploying it back safely through Maximo's REST API. Use this skill whenever the user wants to pull, push, sync, compare or change anything in Maximo from this repo — domains, objects/attributes (Database Configuration), relationships, conditions, App Designer screens, automation scripts, actions, escalations, cron tasks, workflows, roles, security groups/sig options/grants, publish channels, enterprise services, endpoints, object structures, classifications, reports — and also for connecting or bootstrapping a new Maximo environment, running doctor, predeployment, or diagnosing BMXAA9301E / BMXAA4216E / BMXAA1283E API errors. Use it even when the user just says "deploy this to demo", "what changed on dev", or "get WOTRACK", without naming maxdev.
+description: How to do IBM Maximo / MAS 9 Manage development in the TMG_Max_Dev repo with the maxdev CLI (python3 -m maxdev) and the tmg-maximo-dev MCP server — connecting an environment, pulling (extracting) configuration into src/, editing it, diffing against live, and deploying it back safely through Maximo's REST API. Use this skill whenever the user wants to pull, push, sync, compare or change anything in Maximo from this repo — domains, objects/attributes (Database Configuration), relationships, conditions, App Designer screens, automation scripts, actions, escalations, cron tasks, workflows, roles, security groups/sig options/grants, publish channels, enterprise services, endpoints, object structures, classifications, reports, KPIs, start centers and operational dashboards — and also for connecting or bootstrapping a new Maximo environment, running doctor, predeployment, or diagnosing BMXAA9301E / BMXAA4216E / BMXAA1283E API errors. Use it even when the user just says "deploy this to demo", "what changed on dev", or "get WOTRACK", without naming maxdev.
 ---
 
 # Maximo development with maxdev
@@ -54,8 +54,9 @@ On MAS 9, `mxe.int.enableosauth=1` means an object structure only works over RES
 - Maximo's Jython has **no Python standard library**: `import re`, `json`, `os` and `datetime` fail at runtime. Use `java.util.regex`, `java.util.Calendar` and so on. Java-backed modules like `math` and `time` are fine.
 - Keep one script per MBO + event. Add a new rule to the existing script so launch points don't fight.
 
-## Workflows, Database Configuration, IBM MCP
+## Workflows, dashboards, Database Configuration, IBM MCP
 
 - **Workflows.** Generate with the `maximo-workflow` skill and save under `src/13-workflows/`. Person groups, roles and actions go in their own folders, and the manifest deploys them together.
+- **Operational dashboards (start centers, result sets, KPIs, work queues).** Write a spec in `catalog/dashboards/`, then run `maxdev dashboard check|build <spec>` (MCP `build_dashboard`) and deploy the generated manifest. Read `references/dashboards.md` first.
 - **Database Configuration.** After deploying `object` changes, run `maxdev dbconfig status`. Structural changes need Admin Mode, which logs users out, so ask before `dbconfig apply --admin --apply`.
 - **IBM MCP server (MAS 9.2, partial feature set).** Use `maxdev ibm-mcp tools --env X` or `ibm_mcp_tools` / `ibm_mcp_call`. Tools that aren't marked read-only need `apply`. Treat results as something to verify.

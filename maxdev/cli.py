@@ -21,6 +21,7 @@
   maxdev lint     [PATH ...]                  TMG standards check (default: all scripts in src/)
   maxdev java     analyze FILE.java [...]     which template / launch point a Java class converts to
   maxdev new      autoscript NAME --type object|attribute|action|library|... (minimal skeleton)
+  maxdev dashboard check|build SPEC           start center + queries + KPIs + work queues from a YAML spec
   maxdev bootstrap [authapps|generate] [--apply]  1) authapps: set auth app on IBM MX* structures
                                               2) deploy TMG structures only where none is REST-usable
   maxdev ibm-mcp  info | tools | call NAME [--args JSON] [--apply]   IBM MAS 9.2 MCP server
@@ -36,7 +37,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import admin, bootstrap_gen, builder, data, engine, ibm_mcp, license, manifest, registry, scaffold, store
+from . import admin, bootstrap_gen, builder, dashboard, data, engine, ibm_mcp, license, manifest, registry, scaffold, store
 from .env import REPO, list_envs
 
 
@@ -115,6 +116,9 @@ def main(argv=None) -> int:
     x.add_argument("--type", default="library", choices=sorted(scaffold.LP_TYPES))
     x.add_argument("--object"); x.add_argument("--attr"); x.add_argument("--js", action="store_true")
 
+    x = sub.add_parser("dashboard"); x.add_argument("action", choices=["check", "build"]); x.add_argument("spec")
+    x.add_argument("--no-manifest", action="store_true")
+
     x = sub.add_parser("bootstrap"); x.add_argument("action", nargs="?", default="deploy", choices=["deploy", "generate", "authapps"])
     x.add_argument("--apply", action="store_true"); x.add_argument("--only", nargs="*")
     sub.add_parser("templates")
@@ -176,6 +180,20 @@ def main(argv=None) -> int:
         if a.cmd == "new":
             path = scaffold.autoscript(a.name, a.type, a.object, a.attr, js=a.js)
             print(f"created {path.relative_to(REPO)}"); return 0
+        if a.cmd == "dashboard":
+            spec = dashboard.load_spec(a.spec)
+            errs = dashboard.validate(spec)
+            for e in errs:
+                print(f"  {e}")
+            if errs or a.action == "check":
+                print(f"{spec['_path']}: {len(errs)} error(s)")
+                return 1 if errs else 0
+            r = dashboard.build(a.spec, write_manifest=not a.no_manifest)
+            for f in r["files"]:
+                print(f"  {'written' if f['changed'] else 'same':<9}{f['type']:<13}{f['file']}")
+            if r.get("manifest"):
+                print(f"manifest {r['manifest']}  ->  maxdev deploy --manifest {spec['name']} --env ENV  (dry run)")
+            return 0
 
         s = engine.Session(a.env)
         # Match MCP's dry-run contract for every imperative write command.

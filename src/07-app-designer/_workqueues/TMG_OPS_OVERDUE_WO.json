@@ -1,0 +1,35 @@
+{
+  "app": "WOTRACK",
+  "clausename": "WOTRACK:TMG OPS OVERDUE WO",
+  "description": "Overdue work orders to triage",
+  "intobjectname": "MXAPIWODETAIL",
+  "isactive": true,
+  "langcode": "EN",
+  "owner": "MAXADMIN",
+  "queuename": "TMG OPS OVERDUE WO",
+  "queuetype": "RESULTSET",
+  "uniquecolumnname": "WORKORDERID",
+  "workqueueactions": [],
+  "workqueuecols": [
+    {
+      "attributename": "DESCRIPTION",
+      "columnorder": 2
+    },
+    {
+      "attributename": "STATUS",
+      "columnorder": 3
+    },
+    {
+      "attributename": "TARGCOMPDATE",
+      "columnorder": 5
+    },
+    {
+      "attributename": "WONUM",
+      "columnorder": 1
+    },
+    {
+      "attributename": "WOPRIORITY",
+      "columnorder": 4
+    }
+  ]
+}

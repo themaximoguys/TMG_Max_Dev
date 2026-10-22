@@ -225,14 +225,51 @@ types:
     folder: 07-app-designer/_queries
     name: [app, clausename]
     handler: json
+    select: "app,clausename,owner,description,clause,ispublic,isuserlist,langcode,intobjectname,notes,priority"
+    note: queryid is generated per environment, so it is left out. Result-set portlets and work queues refer to a query by app + clausename + owner.
+
+  - id: workqueue
+    label: Work queues (WQMANAGER)
+    layer: 2
+    os: MXAPIWORKQUEUE
+    key: [queuename]
+    folder: 07-app-designer/_workqueues
+    handler: replace
+    select: "queuename,description,app,owner,queuetype,clausename,intobjectname,uniquecolumnname,isactive,langcode,workqueuecols{attributename,columnorder},workqueueactions{action,actionlabel,actionorder}"
+    status: verify
+    note: Columns and actions are child rows, so the queue is replaced whole. A RESULTSET queue names its saved query as APP:CLAUSENAME (e.g. WOTRACK:WO_OWNED_BY_ME); the query deploys first.
+
+  - id: kpi
+    label: KPI definitions
+    layer: 2
+    os: MXAPIKPIMAIN
+    key: [kpiname]
+    folder: 19-kpi
+    handler: json
+    select: "kpiname,description,description_longdescription,format,kpitextformat,target,cautionmin,cautionmax,selectstmt,clause,app,ispublic,realtime,trendenabled,trendbatchsize,owner,linkto,url,reportname,reportappname,kpitemplatenum,kpitemplatemainnum,expression,endpointname,recordtime,langcode"
+    note: Definition fields only. kpivalue, lastkpivalue, kpidate and lastupdated are recalculated by Maximo and would show as drift in every diff. Layer 2 so start centers that list a KPI deploy after it.
 
   - id: startcenter
     label: Start center templates
     layer: 2
     os: [TMGMXSCTEMPLATE, MXAPISCTEMPLATE]
-    key: [sctemplateid]
+    key: [contentuid]
     folder: 07-app-designer/_startcenters
     handler: json
+    select: "contentuid,description,name,presentation"
+    note: Keyed on contentuid (the structure's resource key, e.g. BMXAA36), because sctemplateid is generated per environment. Assigning a template to a security group uses that generated id, so it is a manual manifest step. Build new ones with `maxdev dashboard`.
+
+  - id: view
+    label: Saved views and Operational Dashboard layouts (VIEWMANAGER)
+    layer: 2
+    os: MXAPIVIEWMANAGER
+    key: [app, componentid, userid, viewid]
+    folder: 07-app-designer/_views
+    name: [app, componentid, viewid]
+    handler: json
+    select: "app,componentid,viewid,viewname,description,viewtype,userid,ispublic,isdefault,content"
+    status: verify
+    note: OPDASHBOARD rows (viewtype DASHBOARD) are Operational Dashboard layouts; other rows are saved table views in role-based apps. content is the app's own JSON, stored as a string. Group access (DASHBOARDAUTH) is set in the Operational Dashboard app.
 
   # ── Layer 3 ──────────────────────────────────────────────────────────────
   - id: autoscript
@@ -416,13 +453,6 @@ types:
     name: [appname, reportname]
     handler: json
     note: Registration rows only. The .rptdesign files live next to them and are imported via the Report Administration app / report import utility.
-  - id: kpi
-    label: KPI definitions
-    layer: 11
-    os: MXAPIKPIMAIN
-    key: [kpiname]
-    folder: 19-kpi
-    handler: json
 
   # ── Not REST-deployable by design ────────────────────────────────────────
   - id: java

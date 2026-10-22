@@ -294,6 +294,101 @@ class BuilderTests(unittest.TestCase):
         self.assertEqual(r["method_to_template"]["save"], "object_save_before")
 
 
+class DashboardTests(Base):
+    STRUCTS = Base.STRUCTS + ("MXAPIQUERY", "MXAPIKPIMAIN", "MXAPIWORKQUEUE", "TMGMXSCTEMPLATE")
+
+    def setUp(self):
+        super().setUp()
+        from maxdev import dashboard
+        self.dash = dashboard
+        self._manifests = dashboard.MANIFESTS
+        dashboard.MANIFESTS = self.tmp / "manifests"
+
+    def tearDown(self):
+        self.dash.MANIFESTS = self._manifests
+        super().tearDown()
+
+    def test_sample_spec_is_valid(self):
+        spec = self.dash.load_spec("maintenance_supervisor")
+        self.assertEqual(self.dash.validate(spec), [])
+
+    def test_validate_reports_every_problem(self):
+        errs = self.dash.validate({"name": "bad name", "queries": [{"name": "Q", "app": "WOTRACK"}],
+                                   "portlets": [{"type": "resultset", "query": "NOPE", "columns": ["A"], "chart": "B"},
+                                                {"type": "kpilist", "kpis": ["MISSING"]}, {"type": "clock"}]})
+        text = "\n".join(errs)
+        for want in ("name:", "description:", "missing where", "'NOPE' is not in queries",
+                     "chart column 'B'", "['MISSING'] are not in kpis", "type must be one of"):
+            self.assertIn(want, text)
+        now = self.dash.validate({"queries": [{"name": "Q", "app": "A", "where": "d < {now} or e < :SYSDATE"}]})
+        self.assertTrue(any(e.startswith("database:") for e in now))
+        self.assertTrue(any(":sysdate" in e for e in now))
+
+    def test_build_writes_records_and_manifest(self):
+        r = self.dash.build("maintenance_supervisor")
+        types = [f["type"] for f in r["files"]]
+        self.assertEqual(types.count("query"), 3)
+        self.assertEqual(types.count("kpi"), 3)
+        self.assertEqual(types.count("workqueue"), 1)
+        self.assertEqual(types[-1], "startcenter")
+        q = json.loads((registry.SRC / "07-app-designer/_queries/WOTRACK__TMG_OPS_OVERDUE_WO.json").read_text())
+        self.assertEqual((q["app"], q["owner"]), ("WOTRACK", "MAXADMIN"))
+        self.assertNotIn("queryid", q)
+        k = json.loads((registry.SRC / "19-kpi/TMGOPSBACKLOG.json").read_text())
+        self.assertTrue(k["clause"].startswith("where "))
+        self.assertNotIn("kpivalue", k)
+        self.assertNotIn("langcode", k)
+        self.assertIn("targcompdate < GETDATE()", json.loads(
+            (registry.SRC / "19-kpi/TMGOPSOVERDUE.json").read_text())["clause"])
+        wq = json.loads((registry.SRC / "07-app-designer/_workqueues/TMG_OPS_OVERDUE_WO.json").read_text())
+        order = {c["attributename"]: c["columnorder"] for c in wq["workqueuecols"]}
+        self.assertEqual(order, {"WONUM": 1, "DESCRIPTION": 2, "STATUS": 3, "WOPRIORITY": 4, "TARGCOMPDATE": 5})
+        self.assertEqual(list(order), sorted(order), "children sorted as Maximo returns them")
+        self.assertEqual(wq["clausename"], "WOTRACK:TMG OPS OVERDUE WO")
+        m = yaml_load(self.dash.MANIFESTS / "TMG_OPS_SUPERVISOR.yaml")
+        self.assertEqual(len(m["items"][0]["path"]), len(r["files"]))
+        self.assertTrue(any("Start Center Template" in x for x in m["manual"]))
+        again = self.dash.build("maintenance_supervisor")
+        self.assertFalse(any(f["changed"] for f in again["files"]), "rebuild of an unchanged spec must not rewrite")
+
+    def test_startcenter_xml_references_queries_and_kpis(self):
+        import xml.etree.ElementTree as ET
+        self.dash.build("maintenance_supervisor", write_manifest=False)
+        sc = json.loads((registry.SRC / "07-app-designer/_startcenters/TMG_OPS_SUPERVISOR.json").read_text())
+        root = ET.fromstring(sc["presentation"].split("?>", 1)[1])
+        self.assertEqual(root.get("contentuid"), "TMG_OPS_SUPERVISOR")
+        rs = root.findall("resultset")
+        self.assertEqual({r.get("queryclausename") for r in rs},
+                         {"TMG OPS OVERDUE WO", "TMG OPS EMERGENCY WO", "TMG OPS WAITING MATERIAL"})
+        overdue = next(r for r in rs if r.get("queryclausename") == "TMG OPS OVERDUE WO")
+        prio = next(a for a in overdue.findall("attribute") if a.get("querycolumn") == "WOPRIORITY")
+        self.assertEqual((prio.get("isgraphon"), prio.get("isconditionset")), ("1", "1"))
+        self.assertEqual(overdue.get("showchart"), "1")
+        self.assertEqual([k.get("kpiname") for k in root.find("kpilist")],
+                         ["TMGOPSBACKLOG", "TMGOPSOVERDUE", "TMGOPSEMERG"])
+        uids = [e.get("contentuid") for e in root.iter() if e.get("contentuid")]
+        self.assertEqual(len(uids), len(set(uids)), "contentuids must be unique within a template")
+        for col in ("0", "1"):
+            orders = [int(e.get("ordernum")) for e in root if e.get("columnnum") == col]
+            self.assertEqual(orders, list(range(1, len(orders) + 1)))
+
+    def test_deploy_order_puts_startcenter_after_its_sources(self):
+        self.dash.build("maintenance_supervisor")
+        from maxdev import manifest
+        m = manifest.load(str(self.dash.MANIFESTS / "TMG_OPS_SUPERVISOR.yaml"))
+        order = [t.id for t, _ in manifest.items(m)]
+        self.assertEqual(order[-1], "startcenter")
+        self.assertLess(max(i for i, t in enumerate(order) if t == "query"), order.index("workqueue"))
+        dry = engine.deploy(self.s, manifest.items(m))
+        self.assertEqual({r["action"] for r in dry["results"]}, {"would-create"})
+        self.assertEqual(dry["results"][-1]["key"], {"contentuid": "TMG_OPS_SUPERVISOR"})
+
+
+def yaml_load(path):
+    import yaml
+    return yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+
+
 class IbmMcpTests(unittest.TestCase):
     def test_sse_and_session(self):
         c = ibm_mcp.IbmMcpClient("https://fake-mcp/mcp", api_key="k")

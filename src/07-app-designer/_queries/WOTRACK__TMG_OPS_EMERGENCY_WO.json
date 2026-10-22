@@ -1,0 +1,10 @@
+{
+  "app": "WOTRACK",
+  "clause": "worktype = 'EM' and historyflag = 0 and istask = 0 and status not in (select value from synonymdomain where domainid='WOSTATUS' and maxvalue in ('COMP','CLOSE','CAN'))",
+  "clausename": "TMG OPS EMERGENCY WO",
+  "description": "Open emergency work orders",
+  "ispublic": true,
+  "isuserlist": false,
+  "langcode": "EN",
+  "owner": "MAXADMIN"
+}

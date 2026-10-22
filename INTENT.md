@@ -70,13 +70,13 @@ lower layers first:
 ```
 0 Foundation        properties · security groups · person groups · sig options · domains · messages
 1 Data model        objects/attributes (then Database Configuration apply) · relationships · lookup maps · conditions
-2 Application / UI  App Designer XML · conditional UI · queries · start centers · grants · restrictions · formulas
+2 Application / UI  App Designer XML · conditional UI · queries · work queues · KPIs · start centers · views · grants · restrictions · formulas
 3 Business logic    automation scripts · actions · escalations
 4 Scheduling        cron tasks
 5 Workflow          workflow processes (roles, person groups and actions already in place)
 6 Communication     communication templates
 7 Integration       object structures · channels · services · endpoints · external systems · JSON mappings
-8–11                classifications · service management · mobile and inspections · reports and KPIs
+8–11                classifications · service management · mobile and inspections · reports
 ```
 
 A manifest (`manifests/<TICKET>.yaml`) lists one ticket's artifacts. The engine sorts them by

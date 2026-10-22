@@ -1,0 +1,13 @@
+{
+  "cautionmax": 5.0,
+  "cautionmin": 2.0,
+  "clause": "where worktype = 'EM' and historyflag = 0 and istask = 0 and status not in (select value from synonymdomain where domainid='WOSTATUS' and maxvalue in ('COMP','CLOSE','CAN'))",
+  "description": "Open emergency work orders",
+  "format": "DECIMAL",
+  "ispublic": true,
+  "kpiname": "TMGOPSEMERG",
+  "realtime": true,
+  "selectstmt": "select count(*) from workorder",
+  "target": 0.0,
+  "trendenabled": false
+}

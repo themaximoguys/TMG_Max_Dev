@@ -1,0 +1,115 @@
+# Operational dashboard spec: Maintenance Supervisor start center.
+#   maxdev dashboard check maintenance_supervisor     validate only
+#   maxdev dashboard build maintenance_supervisor     write src/ files + manifests/TMG_OPS_SUPERVISOR.yaml
+#   maxdev deploy --manifest TMG_OPS_SUPERVISOR --env demo   dry run; add --apply after review
+#
+# Copy this file to start a new dashboard. SQL runs on the tenant's database, so it sticks to
+# portable SQL: statuses go through SYNONYMDOMAIN (so client synonyms still match), and "now" is
+# written {now}, which the builder turns into the function for `database` below.
+
+name: TMG_OPS_SUPERVISOR            # start center contentuid; also the manifest name
+description: TMG Maintenance Supervisor
+owner: MAXADMIN                     # owner of the saved queries the portlets read
+database: sqlserver                 # sqlserver | oracle | db2 — sets what {now} becomes
+groups: []                          # security groups to give this start center (manual step in the manifest)
+
+queries:
+  - name: TMG OPS OVERDUE WO
+    app: WOTRACK
+    description: Open work orders past their target completion date
+    where: >-
+      woclass in (select value from synonymdomain where domainid='WOCLASS' and maxvalue in ('WORKORDER','ACTIVITY'))
+      and historyflag = 0 and istask = 0
+      and status not in (select value from synonymdomain where domainid='WOSTATUS' and maxvalue in ('COMP','CLOSE','CAN'))
+      and targcompdate < {now}
+  - name: TMG OPS EMERGENCY WO
+    app: WOTRACK
+    description: Open emergency work orders
+    where: >-
+      worktype = 'EM' and historyflag = 0 and istask = 0
+      and status not in (select value from synonymdomain where domainid='WOSTATUS' and maxvalue in ('COMP','CLOSE','CAN'))
+  - name: TMG OPS WAITING MATERIAL
+    app: WOTRACK
+    description: Work orders waiting on material
+    where: >-
+      historyflag = 0 and istask = 0
+      and status in (select value from synonymdomain where domainid='WOSTATUS' and maxvalue = 'WMATL')
+
+kpis:
+  - name: TMGOPSBACKLOG
+    description: Open work order backlog
+    select: select count(*) from workorder
+    where: >-
+      where woclass in (select value from synonymdomain where domainid='WOCLASS' and maxvalue in ('WORKORDER','ACTIVITY'))
+      and historyflag = 0 and istask = 0
+      and status not in (select value from synonymdomain where domainid='WOSTATUS' and maxvalue in ('COMP','CLOSE','CAN'))
+    format: DECIMAL
+    target: 50
+    caution: [60, 80]
+  - name: TMGOPSOVERDUE
+    description: Overdue open work orders
+    select: select count(*) from workorder
+    where: >-
+      where historyflag = 0 and istask = 0
+      and status not in (select value from synonymdomain where domainid='WOSTATUS' and maxvalue in ('COMP','CLOSE','CAN'))
+      and targcompdate < {now}
+    format: DECIMAL
+    target: 5
+    caution: [10, 20]
+  - name: TMGOPSEMERG
+    description: Open emergency work orders
+    select: select count(*) from workorder
+    where: >-
+      where worktype = 'EM' and historyflag = 0 and istask = 0
+      and status not in (select value from synonymdomain where domainid='WOSTATUS' and maxvalue in ('COMP','CLOSE','CAN'))
+    format: DECIMAL
+    target: 0
+    caution: [2, 5]
+
+workqueues:
+  - name: TMG OPS OVERDUE WO
+    description: Overdue work orders to triage
+    query: TMG OPS OVERDUE WO
+    object_structure: MXAPIWODETAIL
+    unique_column: WORKORDERID
+    columns: [WONUM, DESCRIPTION, STATUS, WOPRIORITY, TARGCOMPDATE]
+
+# column 0 = left (narrow), 1 = right (wide) with layout NW; order within a column follows this list.
+portlets:
+  - type: kpilist
+    title: Operational KPIs
+    column: 0
+    kpis: [TMGOPSBACKLOG, TMGOPSOVERDUE, TMGOPSEMERG]
+  - type: quickinsert
+    title: Quick Insert
+    column: 0
+    apps: [{app: WOTRACK, label: New Work Order}, {app: SR, label: New Service Request}]
+  - type: favorites
+    title: Favorite Applications
+    column: 0
+    apps: [WOTRACK, PM, ASSET, SR]
+  - type: resultset
+    title: Overdue Work Orders
+    column: 1
+    query: TMG OPS OVERDUE WO
+    columns: [WONUM, DESCRIPTION, STATUS, WOPRIORITY, TARGCOMPDATE]
+    chart: WOPRIORITY
+    charttype: PIE
+    highlight: [{column: WOPRIORITY, color: "#FF0000", expression: "=", value: 1}]   # priority 1 in red
+  - type: resultset
+    title: Emergency Work
+    column: 1
+    query: TMG OPS EMERGENCY WO
+    columns: [WONUM, DESCRIPTION, STATUS, ASSETNUM, LOCATION]
+  - type: resultset
+    title: Waiting on Material
+    column: 1
+    query: TMG OPS WAITING MATERIAL
+    columns: [WONUM, DESCRIPTION, STATUS, SCHEDFINISH]
+  - type: kpigraph
+    title: Backlog Trend
+    column: 1
+    kpis: [TMGOPSBACKLOG, TMGOPSOVERDUE]
+  - type: inbox
+    title: Inbox / Assignments
+    column: 1

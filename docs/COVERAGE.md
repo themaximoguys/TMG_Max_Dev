@@ -31,8 +31,11 @@ Route column key:
 | 2 | App Designer screens (incl. LIBRARY, LOOKUPS) | `07-app-designer/*.xml` | XML | REST `MXAPIPRESENTATION` (merge-safe) | Extract falls back to `TMG_EXPORT_PRES` |
 | 2 | App descriptions | `07-app-designer/_apps` | JSON | REST | verify |
 | 2 | Conditional UI | `07-app-designer/_conditional-ui` | JSON | REST-replace `TMGMXAPICONDPROP` | 3-level tree |
-| 2 | Saved queries | `07-app-designer/_queries` | JSON | REST | verify |
-| 2 | Start centers | `07-app-designer/_startcenters` | JSON | REST | verify; else Migration Manager |
+| 2 | Saved queries | `07-app-designer/_queries` | JSON | REST `MXAPIQUERY` | queryid left out (generated) |
+| 2 | Work queues | `07-app-designer/_workqueues` | JSON | REST-replace `MXAPIWORKQUEUE` | verify; columns/actions are child rows |
+| 2 | KPIs | `19-kpi` | JSON | REST `MXAPIKPIMAIN` | Definition fields only; calculated values left out |
+| 2 | Start centers | `07-app-designer/_startcenters` | JSON | REST `TMGMXSCTEMPLATE` | Keyed on contentuid; group assignment is manual. Build with `maxdev dashboard` ([dashboards](../skills/maximo-dev/references/dashboards.md)) |
+| 2 | Saved views, Operational Dashboard layouts | `07-app-designer/_views` | JSON | REST `MXAPIVIEWMANAGER` | verify; group access set in OPDASHBOARD |
 | 2 | Data restrictions | `02-security/data-restrictions` | JSON | REST `MXAPIDATARESTRICTION` | Generated ids differ per env |
 | 2 | Sig option grants | `02-security/grants` | JSON | REST `MXAPIGROUP` children | Merge, never removes |
 | 2 | Attribute formulas | `08-formulas` | JSON | REST-replace `MXAPIATTRFORMULA` | |
@@ -49,7 +52,6 @@ Route column key:
 | 10 | Inspection forms | `18-mobile/inspection-forms` | JSON | REST | verify; needs OS authorisation |
 | 10 | MAF / Mobile / role-based apps | `18-mobile/maf-apps/<APP>/` | app.xml, AppCustomizations.js | **Manual** publish in Application Configuration | No IBM deploy API, see [APPLICATION_DEVELOPMENT.md](APPLICATION_DEVELOPMENT.md) |
 | 11 | BIRT reports | `19-reports` | registration JSON + `.rptdesign` | REST registration; design import manual | No IBM REST import for designs |
-| 11 | KPIs | `19-kpi` | JSON | REST `MXAPIKPIMAIN` | |
 | 99 | Java customisations | `90-java` | source + customization archive | **Other**: ManageWorkspace CR | Java 17; rebuild = pod restart |
 | 99 | Data loads | `91-data` | JSON/CSV | `maxdev data load` (REST BULK) | Per-item status checked |
 | — | Migration Manager packages | n/a | zip | `maxdev dm create/download/upload/deploy` | For areas REST can't reach; verify `/dm/*` path on MAS 9 |

@@ -16,7 +16,7 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
-from . import admin, builder, data, engine, ibm_mcp, license, manifest, registry, scaffold, store
+from . import admin, builder, dashboard, data, engine, ibm_mcp, license, manifest, registry, scaffold, store
 from .env import REPO, list_envs
 
 mcp = FastMCP("tmg-maximo-dev")
@@ -192,6 +192,14 @@ def write_artifact(type_id: str, record: dict) -> str:
     store.key_of(t, record)
     path, changed = store.save_json(t, record)
     return _ok({"file": str(path.relative_to(REPO)), "changed": changed})
+
+
+@mcp.tool()
+def build_dashboard(spec: str, write_manifest: bool = True) -> str:
+    """Build an operational dashboard from a YAML spec (catalog/dashboards/<name>.yaml or a path): writes the
+    saved queries, KPIs, work queues and start center template into src/ plus manifests/<NAME>.yaml.
+    Offline; deploy it with deploy(manifest_name=NAME) as a dry run first."""
+    return _ok(dashboard.build(spec, write_manifest=write_manifest))
 
 
 @mcp.tool()

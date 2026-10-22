@@ -1,0 +1,10 @@
+{
+  "app": "WOTRACK",
+  "clause": "historyflag = 0 and istask = 0 and status in (select value from synonymdomain where domainid='WOSTATUS' and maxvalue = 'WMATL')",
+  "clausename": "TMG OPS WAITING MATERIAL",
+  "description": "Work orders waiting on material",
+  "ispublic": true,
+  "isuserlist": false,
+  "langcode": "EN",
+  "owner": "MAXADMIN"
+}

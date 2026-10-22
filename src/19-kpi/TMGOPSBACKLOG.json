@@ -1,0 +1,13 @@
+{
+  "cautionmax": 80.0,
+  "cautionmin": 60.0,
+  "clause": "where woclass in (select value from synonymdomain where domainid='WOCLASS' and maxvalue in ('WORKORDER','ACTIVITY')) and historyflag = 0 and istask = 0 and status not in (select value from synonymdomain where domainid='WOSTATUS' and maxvalue in ('COMP','CLOSE','CAN'))",
+  "description": "Open work order backlog",
+  "format": "DECIMAL",
+  "ispublic": true,
+  "kpiname": "TMGOPSBACKLOG",
+  "realtime": true,
+  "selectstmt": "select count(*) from workorder",
+  "target": 50.0,
+  "trendenabled": false
+}

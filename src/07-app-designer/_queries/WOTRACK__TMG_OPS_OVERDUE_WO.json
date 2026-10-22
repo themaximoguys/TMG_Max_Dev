@@ -1,0 +1,10 @@
+{
+  "app": "WOTRACK",
+  "clause": "woclass in (select value from synonymdomain where domainid='WOCLASS' and maxvalue in ('WORKORDER','ACTIVITY')) and historyflag = 0 and istask = 0 and status not in (select value from synonymdomain where domainid='WOSTATUS' and maxvalue in ('COMP','CLOSE','CAN')) and targcompdate < GETDATE()",
+  "clausename": "TMG OPS OVERDUE WO",
+  "description": "Open work orders past their target completion date",
+  "ispublic": true,
+  "isuserlist": false,
+  "langcode": "EN",
+  "owner": "MAXADMIN"
+}
