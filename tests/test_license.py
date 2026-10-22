@@ -1,5 +1,7 @@
 """Licence key verification and the Session gate."""
+import contextlib
 import datetime as dt
+import io
 import json
 import os
 import tempfile
@@ -69,7 +71,10 @@ class LicenseTests(unittest.TestCase):
 
     def test_expiry_grace_then_refused(self):
         self.use(fx.token(expires=TODAY - dt.timedelta(days=3)))
-        self.assertEqual(license.require(URL, today=TODAY).id, "TMG-TEST-001")
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            self.assertEqual(license.require(URL, today=TODAY).id, "TMG-TEST-001")
+        self.assertIn(f"{license.GRACE_DAYS - 3} grace day(s) left", err.getvalue())
         self.assertEqual(license.load().as_dict(TODAY)["state"], "grace")
         self.use(fx.token(expires=TODAY - dt.timedelta(days=license.GRACE_DAYS + 1)))
         with self.assertRaisesRegex(license.LicenseError, "expired"):
