@@ -3,6 +3,8 @@ environments/.env.*
 !environments/.env.example
 *.pem
 *.key
+# public-preview licence (expires 2026-10-28); the real key lives in ~/.config/maxdev
+!license.key
 # tool state: backups of live screens, deploy receipts
 .maxdev/
 # python
