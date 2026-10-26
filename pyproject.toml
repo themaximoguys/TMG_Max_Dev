@@ -5,7 +5,7 @@ description = "TMG Maximo/MAS development: config-as-code extract, diff and depl
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 authors = [{ name = "TheMaximoGuys LLC", email = "hello@themaximoguys.ai" }]
-classifiers = ["License :: Other/Proprietary License", "Private :: Do Not Upload"]
+classifiers = ["License :: OSI Approved :: MIT License"]
 dependencies = ["requests>=2.31", "PyYAML>=6.0", "mcp>=1.2", "cryptography>=41"]
 
 [project.scripts]

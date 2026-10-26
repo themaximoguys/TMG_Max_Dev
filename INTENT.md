@@ -161,5 +161,5 @@ Client configuration, credentials and tenant hostnames are never committed.
 
 ## Ownership
 
-Proprietary to TheMaximoGuys LLC (see `LICENSE`). Connecting to Maximo requires a
+Copyright TheMaximoGuys LLC, released under the MIT License (see `LICENSE`). Connecting to Maximo requires a
 TheMaximoGuys licence key.

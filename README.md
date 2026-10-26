@@ -1,31 +1,156 @@
-# TMG Maximo Development (`maxdev`)
+<div align="center">
 
-Code-managed, AI-assisted IBM Maximo / MAS 9 Manage development. Every
-configuration and code artifact lives in Git as one reviewable file. It is pulled
-from and pushed to Maximo **through Maximo's own APIs**, from either a CLI or an
-MCP server, so any coding agent (CLI or MCP client) can do the same work you do.
+# ⚙️ TMG Maximo Development · `maxdev`
 
-What it builds and deploys: Database Configuration, domains, App Designer screens,
-automation scripts (from TMG templates, with Java/TRM conversion), workflows,
-security, integration, KPIs, work queues, and **operations dashboards** —
-Operational Dashboard views and start centers built from one YAML spec.
+### AI-powered, config-as-code development for IBM Maximo Application Suite 9
 
-This repo deliberately contains **no CI/CD or pipelines**. It is the development
-layer: extract, edit, diff, deploy to DEV, verify. Promotion beyond DEV is a
-separate release process; mark those environments `MAXIMO_PROTECTED=true` and
-this tool refuses to write to them.
+**Pull it. Version it. Diff it. Ship it — with an AI agent at your side.**
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-22c55e?style=for-the-badge)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](pyproject.toml)
+[![IBM MAS 9](https://img.shields.io/badge/IBM%20MAS-9%20Manage-0f62fe?style=for-the-badge)](docs/COVERAGE.md)
+[![MCP Server](https://img.shields.io/badge/MCP-Server-8b5cf6?style=for-the-badge)](docs/AGENT_SETUP.md)
+<br/>
+[![Artifact types](https://img.shields.io/badge/Artifact%20types-46-f97316?style=for-the-badge)](maxdev/registry.yaml)
+[![Tests](https://img.shields.io/badge/Offline%20tests-passing-16a34a?style=for-the-badge)](tests/)
+[![No CI/CD](https://img.shields.io/badge/Layer-DEV%20only-ec4899?style=for-the-badge)](#-safety-by-design)
+[![TheMaximoGuys](https://img.shields.io/badge/by-TheMaximoGuys-111827?style=for-the-badge)](https://themaximoguys.ai)
+
+</div>
+
+---
+
+**`maxdev` turns IBM Maximo into a codebase.** Every domain, object, App Designer
+screen, automation script, workflow, security group, integration and dashboard in
+your Manage environment becomes one reviewable file in Git — pulled from and pushed
+back to Maximo **through Maximo's own REST APIs**. No database hacks, no
+hand-copied XML, no "who changed that in production?" moments. You get diffs,
+history, code review and repeatable deployments for a platform that has
+historically lived only inside its own UI.
+
+**And it was built for AI from day one.** The same engine is exposed as a CLI *and*
+as an MCP server, so Claude, Gemini, ChatGPT/Codex, Mistral, IBM Bob or any other
+MCP-capable coding agent can extract configuration, write TMG-standard Jython
+automation scripts, convert legacy Java and TRM customisations, and deploy to DEV
+— under exactly the same dry-run, lint and protected-environment rules you work
+under. Your team describes the change; the agent does the Maximo plumbing.
+
+<br/>
+
+<div align="center">
+
+## 🤖 Works with your favourite AI
+
+<table>
+  <tr>
+    <td align="center" width="140">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="https://cdn.jsdelivr.net/npm/@lobehub/icons-static-png@1.80.0/dark/claude-color.png">
+        <img src="https://cdn.jsdelivr.net/npm/@lobehub/icons-static-png@1.80.0/light/claude-color.png" width="56" height="56" alt="Anthropic Claude">
+      </picture>
+      <br/><b>Anthropic</b><br/><sub>Claude Code</sub>
+    </td>
+    <td align="center" width="140">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="https://cdn.jsdelivr.net/npm/@lobehub/icons-static-png@1.80.0/dark/gemini-color.png">
+        <img src="https://cdn.jsdelivr.net/npm/@lobehub/icons-static-png@1.80.0/light/gemini-color.png" width="56" height="56" alt="Google Gemini">
+      </picture>
+      <br/><b>Google</b><br/><sub>Gemini CLI</sub>
+    </td>
+    <td align="center" width="140">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="https://cdn.jsdelivr.net/npm/@lobehub/icons-static-png@1.80.0/dark/openai.png">
+        <img src="https://cdn.jsdelivr.net/npm/@lobehub/icons-static-png@1.80.0/light/openai.png" width="56" height="56" alt="OpenAI">
+      </picture>
+      <br/><b>OpenAI</b><br/><sub>Codex</sub>
+    </td>
+    <td align="center" width="140">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="https://cdn.jsdelivr.net/npm/@lobehub/icons-static-png@1.80.0/dark/ibm.png">
+        <img src="https://cdn.jsdelivr.net/npm/@lobehub/icons-static-png@1.80.0/light/ibm.png" width="56" height="56" alt="IBM Bob">
+      </picture>
+      <br/><b>IBM</b><br/><sub>Bob</sub>
+    </td>
+    <td align="center" width="140">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="https://cdn.jsdelivr.net/npm/@lobehub/icons-static-png@1.80.0/dark/mistral-color.png">
+        <img src="https://cdn.jsdelivr.net/npm/@lobehub/icons-static-png@1.80.0/light/mistral-color.png" width="56" height="56" alt="Mistral AI">
+      </picture>
+      <br/><b>Mistral AI</b><br/><sub>any MCP client</sub>
+    </td>
+  </tr>
+</table>
+
+<sub>Agent instructions ship as <code>AGENTS.md</code>, <code>CLAUDE.md</code> and <code>GEMINI.md</code>; the <code>tmg-maximo-dev</code> MCP server works with any MCP client. See the <a href="docs/AGENT_SETUP.md">agent setup guide</a>.</sub>
+
+</div>
+
+---
+
+## 🧠 The automation orchestration layer for IBM MAS development
+
+Maximo development has always meant a tour of screens: Database Configuration,
+Domains, App Designer, Automation Scripts, Workflow Designer, Security Groups,
+Object Structures — each with its own export format and its own way to break
+production. `maxdev` puts **one orchestration layer** over all of it. A single
+`registry.yaml` describes 46 artifact types, their REST object structures, their
+keys and their dependency layer (0 foundation → 11 reporting). Change sets are
+plain YAML manifests, one per ticket, that the engine resolves, orders, lints,
+dry-runs and deploys — writing a receipt of exactly what landed, backing up and
+merging App Designer screens, and restoring formulas automatically if a re-create
+fails.
+
+On top of that engine sits the **agent layer**. Repo skills (`maximo-dev`,
+`maximo-dev-engine`, `create-automation-script`, `convert-java-to-script`,
+`convert-trm-to-script`, `maximo-workflow`) teach any coding agent the TMG way to
+run a ticket end to end: read the spec, call design-phase specialists only where a
+requirement needs them, generate scripts from 28 TMG templates, build dashboards
+from one YAML spec, then dry-run and wait for human approval before anything
+touches Maximo. The result is an AI teammate that knows Maximo's APIs, your
+standards and your guard-rails — and an orchestration layer that makes its work
+reviewable, repeatable and safe.
+
+```mermaid
+flowchart LR
+    A["👩‍💻 You"] --> CLI["⌨️ maxdev CLI"]
+    B["🤖 AI agent<br/>Claude · Gemini · Codex · Bob · Mistral"] --> MCP["🔌 tmg-maximo-dev<br/>MCP server"]
+    CLI --> E["⚙️ Engine<br/>registry.yaml · 46 types"]
+    MCP --> E
+    E --> S["🛡️ Lint · dry run · receipts<br/>protected-env guard"]
+    S --> API["🏭 Manage JSON API<br/>/maximo/api/os/* · /api/script/*"]
+    S --> IBM["🧩 IBM Maximo MCP<br/>MAS 9.2, optional"]
+
+    style A fill:#0ea5e9,stroke:#0369a1,color:#fff
+    style B fill:#8b5cf6,stroke:#6d28d9,color:#fff
+    style CLI fill:#f59e0b,stroke:#b45309,color:#fff
+    style MCP fill:#ec4899,stroke:#be185d,color:#fff
+    style E fill:#22c55e,stroke:#15803d,color:#fff
+    style S fill:#ef4444,stroke:#b91c1c,color:#fff
+    style API fill:#0f62fe,stroke:#0043ce,color:#fff
+    style IBM fill:#0f62fe,stroke:#0043ce,color:#fff
 ```
- you / agent  ──► maxdev CLI ─┐
-                              ├─► engine ─► registry.yaml (46 artifact types)
- MCP client  ───► MCP server ─┘     │
-                                    ├─► Manage JSON API  /maximo/api/os/* , /api/script/*
-                                    └─► IBM Maximo MCP server (MAS 9.2, optional)
-```
 
-Start coding agents with [AGENTS.md](AGENTS.md) and the [setup guide](docs/AGENT_SETUP.md).
+---
 
-## Quick start
+## ✨ What you can build and ship
+
+| | Area | What `maxdev` handles |
+|:-:|---|---|
+| 🗄️ | **Database Configuration** | Objects, attributes, relationships, indexes — plus `dbconfig status` for pending applies |
+| 📚 | **Domains & conditions** | ALN / numeric / table / crossover domains, conditional expressions |
+| 🖥️ | **App Designer** | Whole-screen XML with live backup, three-way merge and read-back check |
+| 🐍 | **Automation scripts** | 28 TMG templates, linting to TMG standards, Java and TRM conversion |
+| 🔀 | **Workflows & escalations** | Processes, actions, roles, cron tasks |
+| 🔐 | **Security** | Groups, sig options, grants, app/object-structure rights |
+| 🔗 | **Integration** | Object structures, publish channels, enterprise services, endpoints |
+| 📊 | **Dashboards** | Operational Dashboard views + start centers, KPIs, work queues — from one YAML spec |
+| 🧩 | **IBM tooling** | Optional IBM Maximo MCP server through the same safety checks |
+
+<sub>Full map in <a href="docs/COVERAGE.md">docs/COVERAGE.md</a>.</sub>
+
+---
+
+## 🚀 Quick start
 
 ```bash
 pip install -r requirements.txt            # requests, PyYAML, mcp
@@ -36,9 +161,11 @@ python3 -m maxdev bootstrap authapps --env demo  # set auth app on IBM MX* struc
 python3 -m maxdev bootstrap --env demo     # TMG structures only where IBM has none usable (dry run; --apply)
 ```
 
-`pip install -e .` also gives you the `maxdev` and `maxdev-mcp` commands.
+> [!TIP]
+> `pip install -e .` also gives you the `maxdev` and `maxdev-mcp` commands.
+> Coding agents start with [AGENTS.md](AGENTS.md) and the [setup guide](docs/AGENT_SETUP.md).
 
-## Daily loop
+## 🔁 Daily loop
 
 ```bash
 maxdev extract domain --like TMG            # pull TMG* domains into src/03-domains/
@@ -55,7 +182,7 @@ maxdev deploy --manifest WO-CUSTOMER-EMAIL --apply
 maxdev dbconfig status                      # objects with unapplied Database Configuration
 ```
 
-## Dashboards
+## 📊 Dashboards
 
 One YAML spec (`catalog/dashboards/`) builds an Operational Dashboard view and/or a
 start center, plus the security group and its rights, saved queries, KPIs and work queues behind them.
@@ -69,16 +196,25 @@ maxdev dashboard build maintenance_supervisor       # src/ files + manifests/TMG
 maxdev deploy --manifest TMG_OPS_SUPERVISOR --env demo   # dry run; --apply after approval
 ```
 
-Deploy rules:
-- Deploy always runs in dependency order (layer 0 foundation → 11 reporting) and stops at the first failure. Maximo config writes are not a transaction, so the receipt in `.maxdev/receipts/` records exactly what landed.
-- Upserts look a record up by its key, then merge into it or create it. A key that matches more than one record is refused rather than guessed.
-- Formulas and conditional UI are deleted and re-created, with a read-back check. If the re-create fails, the old rows are restored automatically.
-- App Designer XML is a whole-screen document, so deploy:
+## 🛡️ Safety by design
+
+This repo deliberately contains **no CI/CD or pipelines**. It is the development
+layer: extract, edit, diff, deploy to DEV, verify. Promotion beyond DEV is a
+separate release process; mark those environments `MAXIMO_PROTECTED=true` and
+this tool refuses to write to them.
+
+> [!IMPORTANT]
+> Every live write is a **dry run first**. Nothing is applied until a human approves it.
+
+- 🧭 Deploy always runs in dependency order (layer 0 foundation → 11 reporting) and stops at the first failure. Maximo config writes are not a transaction, so the receipt in `.maxdev/receipts/` records exactly what landed.
+- 🔑 Upserts look a record up by its key, then merge into it or create it. A key that matches more than one record is refused rather than guessed.
+- ♻️ Formulas and conditional UI are deleted and re-created, with a read-back check. If the re-create fails, the old rows are restored automatically.
+- 🖥️ App Designer XML is a whole-screen document, so deploy:
   - backs up the live screen first;
   - merges the repo copy on top of the live one, so changes made in the UI survive;
   - reads the screen back to catch a write the server silently dropped.
 
-## Layout
+## 🗂️ Layout
 
 | Path | What |
 |---|---|
@@ -95,7 +231,7 @@ Deploy rules:
 | `skills/` | `maximo-dev`, `maximo-dev-engine`, `create-automation-script`, `convert-java-to-script`, `convert-trm-to-script`, `maximo-workflow` |
 | `tests/` | Offline tests against an in-memory fake Manage API (`python3 -m unittest discover -s tests`) |
 
-## MCP
+## 🔌 MCP
 
 The local **tmg-maximo-dev** server exposes the same engine to MCP clients.
 `.mcp.json` configures Claude Code; `config/agents/codex.toml` is the Codex
@@ -106,10 +242,9 @@ IBM MCP is optional and accessed through `maxdev ibm-mcp` or the wrapper's
 `ibm_mcp_*` tools so the same apply/protected-environment checks remain in place.
 No credentials or default tenant are embedded in shared client configuration.
 
-## Status
+## 📈 Status
 
 **Live on the TMG demo (MAS 9):** `maxdev doctor` reports 41 of the 43 REST areas `ok` (SLAs and response plans have no structure there; 3 more areas are manual by design), and the bootstrap structures are installed. A sample dashboard (12 records, including an Operational Dashboard view and its group rights) is deployed and re-diffs `same`. Write path proven: bootstrap created 16 records, and the export script was updated and verified live. On a new tenant, dry-run and obtain approval before applying: `maxdev bootstrap authapps --apply` sets the authorisation app on 6 IBM MX\* structures; then `maxdev bootstrap --apply` creates 10 TMG structures, only for areas that have no REST-usable IBM structure.
-
 
 The engine, formats and safety rules are tested offline (run the test command for the current count). These items still need a live check on a TMG tenant:
 - Object-structure names marked `verify` in `maxdev types`; run `maxdev doctor` to check them.
@@ -118,12 +253,24 @@ The engine, formats and safety rules are tested offline (run the test command fo
 
 The reference repo verified the `ok` names on a MAS 9 tenant.
 
-## License
+---
 
-Copyright (c) 2026 TheMaximoGuys LLC. All rights reserved. This is proprietary
-software, licensed only under a signed agreement with TheMaximoGuys LLC; see
-[LICENSE](LICENSE). The bundled `catalog/` is MIT-licensed; third-party notices
-are in [NOTICE](NOTICE).
+## 📜 License
 
-IBM, Maximo and IBM Maximo Application Suite are trademarks of IBM. This product
-is not affiliated with or endorsed by IBM and contains no IBM code.
+Released under the **[MIT License](LICENSE)** — free to use, modify and
+distribute. Copyright (c) 2026 TheMaximoGuys LLC. Third-party notices are in
+[NOTICE](NOTICE).
+
+IBM, Maximo and IBM Maximo Application Suite are trademarks of IBM. Anthropic,
+Claude, Google, Gemini, OpenAI, Codex, Mistral AI and IBM Bob are trademarks of
+their respective owners; logos are shown only to indicate compatibility. This
+product is not affiliated with or endorsed by any of them and contains no IBM code.
+
+<div align="center">
+<br/>
+
+**Built with ❤️ by [TheMaximoGuys](https://themaximoguys.ai)** · Questions, training or enterprise support: [hello@themaximoguys.ai](mailto:hello@themaximoguys.ai)
+
+⭐ **If `maxdev` saves you a trip through App Designer, give it a star!**
+
+</div>
