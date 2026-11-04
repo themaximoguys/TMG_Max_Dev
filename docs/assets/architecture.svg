@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" width="960" height="640" role="img" aria-label="How a change flows through maxdev">
+<style>
+.t{font:700 17px -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;fill:#f5f7ff} .s{font:13px -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;fill:#a9b4d0} .m{font:12.5px SFMono-Regular,Consolas,Menlo,monospace;fill:#a9b4d0}
+.lbl{font:700 11px -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;fill:#8193c2;letter-spacing:2.2px} .num{font:800 11px SFMono-Regular,Consolas,Menlo,monospace;fill:#4f5f8f}
+.hdr{font:700 12px -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;fill:#8193c2;letter-spacing:3px}
+.chip{font:600 13px -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;fill:#fecdd3}
+.flow{fill:none;stroke:#7f93cc;stroke-width:2;stroke-dasharray:5 7;animation:f 1.4s linear infinite}
+@keyframes f{to{stroke-dashoffset:-24}}
+</style><defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0a0f1f"/><stop offset="1" stop-color="#141c3a"/></linearGradient>
+<radialGradient id="glow1" cx=".85" cy=".08" r=".5"><stop offset="0" stop-color="#8b5cf6" stop-opacity=".28"/><stop offset="1" stop-color="#8b5cf6" stop-opacity="0"/></radialGradient>
+<radialGradient id="glow2" cx=".1" cy=".95" r=".5"><stop offset="0" stop-color="#0f62fe" stop-opacity=".25"/><stop offset="1" stop-color="#0f62fe" stop-opacity="0"/></radialGradient>
+<linearGradient id="card" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".075"/><stop offset="1" stop-color="#fff" stop-opacity=".025"/></linearGradient>
+<pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse"><circle cx="1.5" cy="1.5" r="1.1" fill="#fff" fill-opacity=".05"/></pattern>
+<marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#7f93cc"/></marker>
+<linearGradient id="gcli" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f59e0b"/><stop offset="1" stop-color="#f97316"/></linearGradient>
+<linearGradient id="gmcp" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#ec4899"/></linearGradient>
+<linearGradient id="geng" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22c55e"/><stop offset="1" stop-color="#14b8a6"/></linearGradient>
+<linearGradient id="ggrd" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ef4444"/><stop offset="1" stop-color="#f43f5e"/></linearGradient>
+<linearGradient id="gapi" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0f62fe"/><stop offset="1" stop-color="#38bdf8"/></linearGradient>
+<linearGradient id="gibm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#0f62fe"/></linearGradient>
+</defs>
+<rect width="960" height="640" rx="22" fill="url(#bg)"/><rect width="960" height="640" rx="22" fill="url(#dots)"/>
+<rect width="960" height="640" rx="22" fill="url(#glow1)"/><rect width="960" height="640" rx="22" fill="url(#glow2)"/>
+<text class="hdr" x="40" y="42">HOW A CHANGE FLOWS THROUGH MAXDEV</text>
+<text class="num" x="40" y="106">01</text><text class="lbl" x="40" y="124">INTERFACE</text>
+<text class="num" x="40" y="252">02</text><text class="lbl" x="40" y="270">ORCHESTRATE</text>
+<text class="num" x="40" y="402">03</text><text class="lbl" x="40" y="420">GUARDRAILS</text>
+<text class="num" x="40" y="552">04</text><text class="lbl" x="40" y="570">MAXIMO</text>
+<path class="flow" d="M370 160 C370 192 470 182 470 212" marker-end="url(#ah)"/>
+<path class="flow" d="M750 160 C750 192 650 182 650 212" marker-end="url(#ah)"/>
+<path class="flow" d="M560 302 L560 354" marker-end="url(#ah)"/>
+<path class="flow" d="M420 460 C420 488 400 486 400 512" marker-end="url(#ah)"/>
+<path class="flow" d="M780 460 L780 512" marker-end="url(#ah)" opacity=".7"/>
+<rect x="200" y="64" width="340" height="96" rx="16" fill="url(#card)" stroke="url(#gcli)" stroke-opacity=".75" stroke-width="1.5"/>
+<rect x="224" y="64" width="292" height="2" rx="1" fill="url(#gcli)" opacity=".9"/>
+<rect x="220" y="88.0" width="48" height="48" rx="13" fill="url(#gcli)"/>
+<text x="244" y="118.0" text-anchor="middle" style="font:800 17px SFMono-Regular,Consolas,Menlo,monospace;fill:#fff">&gt;_</text>
+<text class="t" x="288" y="108.0">maxdev CLI</text>
+<text class="s" x="288" y="130.0">You, in the terminal</text>
+<rect x="580" y="64" width="340" height="96" rx="16" fill="url(#card)" stroke="url(#gmcp)" stroke-opacity=".75" stroke-width="1.5"/>
+<rect x="604" y="64" width="292" height="2" rx="1" fill="url(#gmcp)" opacity=".9"/>
+<rect x="600" y="88.0" width="48" height="48" rx="13" fill="url(#gmcp)"/>
+<g fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M618 101.0v6M630 101.0v6"/><rect x="614" y="107.0" width="20" height="10" rx="3"/><path d="M624 117.0v7"/></g>
+<text class="t" x="668" y="108.0">tmg-maximo-dev MCP</text>
+<text class="s" x="668" y="130.0">Claude · Gemini · Codex · Bob · Mistral</text>
+<rect x="200" y="214" width="720" height="88" rx="16" fill="url(#card)" stroke="url(#geng)" stroke-opacity=".75" stroke-width="1.5"/>
+<rect x="224" y="214" width="672" height="2" rx="1" fill="url(#geng)" opacity=".9"/>
+<rect x="220" y="234.0" width="48" height="48" rx="13" fill="url(#geng)"/>
+<g fill="#fff"><rect x="233" y="247.0" width="22" height="5" rx="2.5"/><rect x="233" y="255.5" width="22" height="5" rx="2.5" opacity=".8"/><rect x="233" y="264.0" width="22" height="5" rx="2.5" opacity=".6"/></g>
+<text class="t" x="288" y="254.0">Orchestration engine</text>
+<text class="s" x="288" y="276.0">registry.yaml · 46 artifact types · per-ticket manifests · dependency ordering</text>
+<rect x="200" y="356" width="720" height="104" rx="16" fill="#ef4444" fill-opacity=".07" stroke="url(#ggrd)" stroke-opacity=".75" stroke-width="1.5"/>
+<rect x="224" y="356" width="672" height="2" rx="1" fill="url(#ggrd)"/>
+<rect x="220" y="384" width="48" height="48" rx="13" fill="url(#ggrd)"/><path d="M244 396L254 400V408C254 415 249 419 244 421C239 419 234 415 234 408V400Z" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/><path d="M239.5 408l3.2 3.3 6-6.3" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text class="t" x="288" y="392">Guardrails</text><text class="s" x="390" y="392">nothing reaches Maximo without them</text>
+<rect x="288" y="408" width="57.2" height="30" rx="15" fill="#f43f5e" fill-opacity=".14" stroke="#f43f5e" stroke-opacity=".55"/><text class="chip" x="316.6" y="428" text-anchor="middle">Lint</text>
+<rect x="355.2" y="408" width="79.1" height="30" rx="15" fill="#f43f5e" fill-opacity=".14" stroke="#f43f5e" stroke-opacity=".55"/><text class="chip" x="394.75" y="428" text-anchor="middle">Dry run</text>
+<rect x="444.29999999999995" y="408" width="130.2" height="30" rx="15" fill="#f43f5e" fill-opacity=".14" stroke="#f43f5e" stroke-opacity=".55"/><text class="chip" x="509.4" y="428" text-anchor="middle">Human approval</text>
+<rect x="584.5" y="408" width="86.4" height="30" rx="15" fill="#f43f5e" fill-opacity=".14" stroke="#f43f5e" stroke-opacity=".55"/><text class="chip" x="627.7" y="428" text-anchor="middle">Receipts</text>
+<rect x="680.9" y="408" width="166.7" height="30" rx="15" fill="#f43f5e" fill-opacity=".14" stroke="#f43f5e" stroke-opacity=".55"/><text class="chip" x="764.25" y="428" text-anchor="middle">Protected-env guard</text>
+<rect x="200" y="512" width="400" height="96" rx="16" fill="url(#card)" stroke="url(#gapi)" stroke-opacity=".75" stroke-width="1.5"/>
+<rect x="224" y="512" width="352" height="2" rx="1" fill="url(#gapi)" opacity=".9"/>
+<rect x="220" y="536.0" width="48" height="48" rx="13" fill="url(#gapi)"/>
+<g fill="none" stroke="#fff" stroke-width="2.2"><ellipse cx="244" cy="552.0" rx="10" ry="4"/><path d="M234 552.0v15c0 2.2 4.5 4 10 4s10-1.8 10-4v-15M234 559.5c0 2.2 4.5 4 10 4s10-1.8 10-4"/></g>
+<text class="t" x="288" y="556.0">Manage JSON API</text>
+<text class="m" x="288" y="578.0">/maximo/api/os/* · /api/script/*</text>
+<rect x="640" y="512" width="280" height="96" rx="16" fill="url(#card)" stroke="url(#gibm)" stroke-opacity=".75" stroke-width="1.5" stroke-dasharray="6 5"/>
+<rect x="664" y="512" width="232" height="2" rx="1" fill="url(#gibm)" opacity=".9"/>
+<rect x="660" y="536.0" width="48" height="48" rx="13" fill="url(#gibm)"/>
+<g fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><circle cx="684" cy="560.0" r="3.5"/><circle cx="675" cy="552.0" r="2.5"/><circle cx="693" cy="552.0" r="2.5"/><circle cx="684" cy="571.0" r="2.5"/><path d="M681.5 557.5L677 553.5M686.5 557.5L691 553.5M684 563.5v5"/></g>
+<text class="t" x="728" y="556.0">IBM Maximo MCP</text>
+<text class="s" x="728" y="578.0">MAS 9.2+</text>
+<rect x="796" y="564" width="70.8" height="22" rx="11" fill="#6366f1" fill-opacity=".18" stroke="#6366f1" stroke-opacity=".6"/><text x="831.4" y="579" text-anchor="middle" style="font:700 10.5px -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;fill:#c7d2fe;letter-spacing:1px">OPTIONAL</text>
+</svg>

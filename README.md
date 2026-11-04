@@ -65,10 +65,7 @@ under. Your team describes the change; the agent does the Maximo plumbing.
       <br/><b>OpenAI</b><br/><sub>Codex</sub>
     </td>
     <td align="center" width="140">
-      <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="https://cdn.jsdelivr.net/npm/@lobehub/icons-static-png@1.80.0/dark/ibm.png">
-        <img src="https://cdn.jsdelivr.net/npm/@lobehub/icons-static-png@1.80.0/light/ibm.png" width="56" height="56" alt="IBM Bob">
-      </picture>
+      <img src="docs/assets/ibm-bob.svg" width="56" height="56" alt="IBM Bob">
       <br/><b>IBM</b><br/><sub>Bob</sub>
     </td>
     <td align="center" width="140">
@@ -110,25 +107,9 @@ touches Maximo. The result is an AI teammate that knows Maximo's APIs, your
 standards and your guard-rails — and an orchestration layer that makes its work
 reviewable, repeatable and safe.
 
-```mermaid
-flowchart LR
-    A["👩‍💻 You"] --> CLI["⌨️ maxdev CLI"]
-    B["🤖 AI agent<br/>Claude · Gemini · Codex · Bob · Mistral"] --> MCP["🔌 tmg-maximo-dev<br/>MCP server"]
-    CLI --> E["⚙️ Engine<br/>registry.yaml · 46 types"]
-    MCP --> E
-    E --> S["🛡️ Lint · dry run · receipts<br/>protected-env guard"]
-    S --> API["🏭 Manage JSON API<br/>/maximo/api/os/* · /api/script/*"]
-    S --> IBM["🧩 IBM Maximo MCP<br/>MAS 9.2, optional"]
-
-    style A fill:#0ea5e9,stroke:#0369a1,color:#fff
-    style B fill:#8b5cf6,stroke:#6d28d9,color:#fff
-    style CLI fill:#f59e0b,stroke:#b45309,color:#fff
-    style MCP fill:#ec4899,stroke:#be185d,color:#fff
-    style E fill:#22c55e,stroke:#15803d,color:#fff
-    style S fill:#ef4444,stroke:#b91c1c,color:#fff
-    style API fill:#0f62fe,stroke:#0043ce,color:#fff
-    style IBM fill:#0f62fe,stroke:#0043ce,color:#fff
-```
+<p align="center">
+  <img src="docs/assets/architecture.svg" width="900" alt="maxdev architecture: you use the maxdev CLI and AI agents use the tmg-maximo-dev MCP server; both drive the engine (registry.yaml, 46 types); every change passes the safety layer (lint, dry run, receipts, protected-env guard) before reaching the Manage JSON API or the optional IBM Maximo MCP (MAS 9.2+)">
+</p>
 
 ---
 
