@@ -2,6 +2,7 @@
 
 - **Type:** {{TYPE}}
 - **Env:** {{ENV}}
+- **MAS version:** [[PLACEHOLDER: 9.0 · 9.1 · 9.2 · 9.3 with fix pack or feature-channel build, e.g. 9.1.21; upgrades: from → to]]
 - **Status:** intake
 - **Opened:** {{DATE}}
 - **Source:** [[PLACEHOLDER: ticket text, spec path, or the user's words]]

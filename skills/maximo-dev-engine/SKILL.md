@@ -39,6 +39,15 @@ no open functional question). Dispatch a specialist only when a requirement trig
 | watsonx Orchestrate, MAS AI/Assist, MCP agents touching Maximo | `ai-orchestrate-specialist` |
 | New groups, grants, data restrictions or an integration/AI user's permissions | `security-architect` |
 | Custom Java, TRM rules or 7.6 customisations to convert | `legacy-conversion-specialist` |
+| Ticket's `MAS version` is 9.0 (or an upgrade lands on 9.0) | `mas-9-0-specialist` |
+| Ticket's `MAS version` is 9.1 (or an upgrade lands on 9.1) | `mas-9-1-specialist` |
+| Ticket's `MAS version` is 9.2 (or an upgrade lands on 9.2) | `mas-9-2-specialist` |
+| Ticket's `MAS version` is 9.3 or a 9.3 feature-channel (pre-GA) build | `mas-9-3-specialist` |
+
+Version specialists add a version lens, not a second design. Dispatch exactly one, the one matching
+the ticket's target version, whenever a requirement touches a version-sensitive area (custom Java,
+mobile/MAF, AI/MCP, add-ons, upgrade). Run it in parallel with the other specialists, and relay its
+questions to the user with the others. If `MAS version` is blank, ask the user for it before Design.
 
 How to dispatch, to keep tokens down:
 - Send only the ticket path, the requirement IDs it owns and the env. Dispatch independent

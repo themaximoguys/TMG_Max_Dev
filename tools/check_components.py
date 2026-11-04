@@ -81,7 +81,7 @@ def _check_engine(root, type_ids):
     skill = root / "skills/maximo-dev-engine/SKILL.md"
     if not (skill / "../TICKET_TEMPLATE.md").resolve().is_file():
         errors.append("skills/maximo-dev-engine/TICKET_TEMPLATE.md missing")
-    named = set(re.findall(r"\|\s*`([a-z][a-z-]+)`\s*\|\s*$", skill.read_text(encoding="utf-8"), re.M)) if skill.is_file() else set()
+    named = set(re.findall(r"\|\s*`([a-z][a-z0-9-]+)`\s*\|\s*$", skill.read_text(encoding="utf-8"), re.M)) if skill.is_file() else set()
     files = {p.stem: p for p in (root / ".claude/agents").glob("*.md")}
     for name in sorted(named - set(files)):
         errors.append(f"maximo-dev-engine names subagent {name}, but .claude/agents/{name}.md is missing")
