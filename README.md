@@ -1,5 +1,7 @@
 <div align="center">
 
+<a href="https://themaximoguys.ai"><img src="docs/assets/themaximoguys-logo.png" alt="TheMaximoGuys logo" width="120" style="border-radius:16px"/></a>
+
 # ⚙️ TMG Maximo Development · `maxdev`
 
 ### AI-powered, config-as-code development for IBM Maximo Application Suite 9
