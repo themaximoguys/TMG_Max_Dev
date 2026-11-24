@@ -9,6 +9,7 @@
   maxdev extract  TYPE [NAME ...] [--like TMG] [--where ...] [--limit N]
   maxdev diff     TYPE [NAME ...] | --path P  repo vs live
   maxdev deploy   TYPE [NAME ...] | --path P | --manifest M   [--apply] [--force-replace]
+  maxdev deploy   --restore BACKUP.xml [--apply]   put a screen back exactly as the file holds it
   maxdev dbconfig status | apply [--admin] [--apply]
   maxdev adminmode state | on | off [--apply]
   maxdev query    OS [--where W] [--select S] [--limit N]
@@ -82,6 +83,9 @@ def main(argv=None) -> int:
             x.add_argument("--apply", action="store_true", help="really write (default: dry run)")
             x.add_argument("--force-replace", action="store_true", help="appxml: overwrite instead of additive merge")
             x.add_argument("--keep-going", action="store_true", help="do not stop at the first failure")
+            x.add_argument("--restore", action="append", metavar="XML",
+                           help="appxml: write this file byte-for-byte (e.g. a .maxdev/backups/... copy); "
+                                "no merge, no layout preservation")
         else:
             x.add_argument("--full", action="store_true", help="compare every live field, not just those in the repo file")
 
@@ -230,10 +234,14 @@ def main(argv=None) -> int:
                     print("   ", row["error"])
             print(r["summary"])
         elif a.cmd == "deploy":
-            items = _items(a)
+            if a.restore and (a.names or a.path or a.manifest or (a.type and a.type != "appxml")):
+                print("--restore takes XML files only; do not combine it with names, --path or --manifest")
+                return 2
+            items = engine.restore_items(a.restore) if a.restore else _items(a)
             if not items:
                 print("nothing to deploy"); return 1
-            r = engine.deploy(s, items, apply=a.apply, force_replace=a.force_replace, stop_on_fail=not a.keep_going)
+            r = engine.deploy(s, items, apply=a.apply, force_replace=a.force_replace, stop_on_fail=not a.keep_going,
+                              restore=bool(a.restore))
             for row in r["results"]:
                 extra = row.get("error") or (row.get("compare") or {}).get("verdict", "")
                 print(f"  {row['action']:<15}{row['type']:<16}{row['file']}  {extra}")

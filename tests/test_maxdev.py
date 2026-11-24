@@ -263,6 +263,48 @@ class EngineTests(Base):
         self.assertEqual(r["results"][0]["action"], "FAILED", r)
         self.assertIn("fallback failed", r["results"][0]["error"])
 
+    def test_appxml_restore_writes_backup_verbatim(self):
+        pretty = appxml.pretty(TABBED_XML)
+        self.fake.seed("mxapipresentation", {"app": "ASSET", "presentation": pretty})
+        backup = self.tmp / "bk" / "ASSET.xml"
+        backup.parent.mkdir()
+        backup.write_text(TABBED_XML)
+        items = engine.restore_items([str(backup)])
+        # A normal deploy keeps the live layout, so it cannot undo a reformat ...
+        engine.deploy(self.s, items, apply=True)
+        self.assertEqual(self.fake.db["mxapipresentation"][0]["presentation"], pretty)
+        # ... a restore puts the file back byte-for-byte.
+        dry = engine.deploy(self.s, items, restore=True)
+        self.assertEqual(dry["results"][0]["action"], "would-restore", dry)
+        self.assertFalse(dry["results"][0]["compare"]["identical"])
+        r = engine.deploy(self.s, items, apply=True, restore=True)
+        self.assertEqual(r["results"][0]["action"], "restored", r)
+        self.assertTrue(r["results"][0]["verbatim"])
+        self.assertEqual(self.fake.db["mxapipresentation"][0]["presentation"], TABBED_XML)
+        self.assertTrue(r["results"][0]["backup"])
+
+    def test_appxml_restore_refuses_loss_without_force(self):
+        self.fake.seed("mxapipresentation", {"app": "WOTRACK", "presentation": LIVE_XML})
+        backup = self.tmp / "WOTRACK.xml"
+        backup.write_text(REPO_XML)              # lacks t_ui, which is live
+        items = engine.restore_items([str(backup)])
+        r = engine.deploy(self.s, items, apply=True, restore=True)
+        self.assertEqual(r["results"][0]["action"], "FAILED")
+        self.assertIn("--force-replace", r["results"][0]["error"])
+        self.assertIn("ADDEDINUI", self.fake.db["mxapipresentation"][0]["presentation"])
+        r = engine.deploy(self.s, items, apply=True, restore=True, force_replace=True)
+        self.assertEqual(r["results"][0]["action"], "restored", r)
+        self.assertEqual(self.fake.db["mxapipresentation"][0]["presentation"], REPO_XML)
+
+    def test_restore_rejects_other_types_and_files(self):
+        t = registry.get("domain")
+        path = store.save_json(t, {"domainid": "A1"})
+        path = path[0] if isinstance(path, tuple) else path
+        r = engine.deploy(self.s, [(t, path)], restore=True)
+        self.assertEqual(r["results"][0]["action"], "FAILED")
+        with self.assertRaises(FileNotFoundError):
+            engine.restore_items([str(self.tmp / "missing.xml")])
+
     def test_foreign_host_href_goes_to_configured_base(self):
         c = self.s.client
         base = FakeMaximo.base.rstrip("/")

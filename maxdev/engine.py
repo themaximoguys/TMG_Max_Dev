@@ -140,6 +140,19 @@ def _extract_appxml(s, t, os_name, where, limit):
 
 
 # ── resolve local files ───────────────────────────────────────────────────
+def restore_items(paths: list[str]) -> list[tuple]:
+    """[(appxml type, Path)] for `deploy --restore`: App Designer XML files anywhere,
+    typically a backup such as .maxdev/backups/<env>/<stamp>/<APP>.xml. The app name
+    is the file name, as in src/07-app-designer/."""
+    t, out = registry.get("appxml"), []
+    for p in paths:
+        path = (REPO / p).resolve() if not Path(p).is_absolute() else Path(p)
+        if not path.is_file() or path.suffix.lower() != ".xml":
+            raise FileNotFoundError(f"--restore needs an App Designer .xml file: {p}")
+        out.append((t, path))
+    return out
+
+
 def resolve_files(type_id: str | None, names: list[str] | None, paths: list[str] | None) -> list[tuple]:
     """Returns [(ArtifactType, Path)] in deploy order."""
     out = []
@@ -188,7 +201,9 @@ def resolve_files(type_id: str | None, names: list[str] | None, paths: list[str]
 
 # ── deploy ─────────────────────────────────────────────────────────────────
 def deploy(s: Session, items: list[tuple], apply: bool = False, force_replace: bool = False,
-           stop_on_fail: bool = True) -> dict:
+           stop_on_fail: bool = True, restore: bool = False) -> dict:
+    """restore=True (appxml only): write each file byte-for-byte, no merge and no
+    layout preservation, e.g. to put a screen back exactly as a backup holds it."""
     if apply:
         s.guard_write()
     stamp = _stamp()
@@ -196,6 +211,8 @@ def deploy(s: Session, items: list[tuple], apply: bool = False, force_replace: b
     for t, path in items:
         res = {"type": t.id, "file": _rel(path)}
         try:
+            if restore and t.handler != "appxml":
+                raise ValueError("--restore applies to App Designer XML (appxml) only")
             if not t.deployable:
                 res.update(action="skipped", reason=f"handler={t.handler}: {t.note}")
             else:
@@ -213,7 +230,7 @@ def deploy(s: Session, items: list[tuple], apply: bool = False, force_replace: b
                 os_name = s.os_for(t)
                 res["os"] = os_name
                 if t.handler == "appxml":
-                    res.update(_deploy_appxml(s, os_name, rec, apply, force_replace, stamp))
+                    res.update(_deploy_appxml(s, os_name, rec, apply, force_replace, stamp, restore))
                 elif t.handler == "sigauth":
                     res.update(_deploy_sigauth(s, os_name, rec, apply))
                 elif not apply:
@@ -247,10 +264,12 @@ def deploy(s: Session, items: list[tuple], apply: bool = False, force_replace: b
     return receipt
 
 
-def _deploy_appxml(s, os_name, rec, apply, force_replace, stamp) -> dict:
+def _deploy_appxml(s, os_name, rec, apply, force_replace, stamp, restore=False) -> dict:
     app, repo_xml = rec["app"], rec["presentation"]
     merged = False
     live = _live_presentation(s, os_name, app)
+    if restore:
+        return _restore_appxml(s, os_name, app, repo_xml, live, apply, force_replace, stamp)
     if live is None:
         cmp = {"verdict": "NEW", "loss": 0}
         payload = repo_xml
@@ -276,10 +295,7 @@ def _deploy_appxml(s, os_name, rec, apply, force_replace, stamp) -> dict:
                          "would-merge" if merged else "would-update")
         return out
     if live is not None:
-        bdir = STATE / "backups" / s.env / stamp
-        bdir.mkdir(parents=True, exist_ok=True)
-        (bdir / f"{app}.xml").write_text(live, encoding="utf-8")
-        out["backup"] = _rel(bdir / f"{app}.xml")
+        out["backup"] = _backup_live(s, app, live, stamp)
     body = {"app": app, "presentation": payload}
     if live is None:
         s.client.create(os_name, body)
@@ -289,6 +305,42 @@ def _deploy_appxml(s, os_name, rec, apply, force_replace, stamp) -> dict:
     if ax.fingerprints(after) != ax.fingerprints(payload):
         raise MaximoError(500, f"{app}: read-back does not match what was sent (write silently dropped?)", os_name)
     out["action"] = "created" if live is None else ("merged" if merged else "updated")
+    return out
+
+
+def _backup_live(s, app: str, live: str, stamp: str) -> str:
+    bdir = STATE / "backups" / s.env / stamp
+    bdir.mkdir(parents=True, exist_ok=True)
+    (bdir / f"{app}.xml").write_text(live, encoding="utf-8")
+    return _rel(bdir / f"{app}.xml")
+
+
+def _restore_appxml(s, os_name, app, xml, live, apply, force_replace, stamp) -> dict:
+    """Send `xml` exactly as given. A merge would rewrite it, so a restore that would drop
+    live elements is refused unless force_replace is set."""
+    cmp = {"verdict": "NEW", "loss": 0} if live is None else ax.compare(live, xml)
+    cmp["format"] = "verbatim"
+    if live is not None:
+        cmp["identical"] = live.rstrip("\n") == xml.rstrip("\n")
+    if cmp["loss"] and not force_replace:
+        raise ValueError(f"{app}: restore would remove {cmp['loss']} live element(s) "
+                         f"(e.g. {', '.join(cmp['loss_sample'][:3])}); add --force-replace to accept")
+    out = {"compare": cmp}
+    if not apply:
+        out["action"] = "would-create" if live is None else "would-restore"
+        return out
+    if live is not None:
+        out["backup"] = _backup_live(s, app, live, stamp)
+    body = {"app": app, "presentation": xml}
+    if live is None:
+        s.client.create(os_name, body)
+    else:
+        s.client.merge(s.client.presentation_href(app, os_name), body)
+    after = _live_presentation(s, os_name, app)
+    if ax.fingerprints(after) != ax.fingerprints(xml):
+        raise MaximoError(500, f"{app}: read-back does not match what was sent (write silently dropped?)", os_name)
+    out["action"] = "created" if live is None else "restored"
+    out["verbatim"] = (after or "").rstrip("\n") == xml.rstrip("\n")
     return out
 
 

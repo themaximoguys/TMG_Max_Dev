@@ -94,9 +94,16 @@ def diff(type_id: str | None = None, names: list[str] | None = None, paths: list
 @mcp.tool()
 def deploy(type_id: str | None = None, names: list[str] | None = None, paths: list[str] | None = None,
            manifest_name: str | None = None, apply: bool = False, force_replace: bool = False,
-           env: str | None = None) -> str:
+           restore_paths: list[str] | None = None, env: str | None = None) -> str:
     """Deploy repo artifacts in dependency order. DRY RUN unless apply=True.
-    App Designer XML is merged additively onto the live screen unless force_replace=True."""
+    App Designer XML is merged additively onto the live screen unless force_replace=True.
+    restore_paths: App Designer XML files (e.g. .maxdev/backups/<env>/<stamp>/<APP>.xml) written
+    byte-for-byte with no merge; use alone, without type_id/names/paths/manifest_name."""
+    if restore_paths:
+        if type_id not in (None, "appxml") or names or paths or manifest_name:
+            return _ok({"error": "restore_paths cannot be combined with names, paths or manifest_name"})
+        return _ok(engine.deploy(_s(env), engine.restore_items(restore_paths), apply=apply,
+                                 force_replace=force_replace, restore=True))
     items = manifest.items(manifest.load(manifest_name)) if manifest_name else engine.resolve_files(type_id, names, paths)
     return _ok(engine.deploy(_s(env), items, apply=apply, force_replace=force_replace))
 

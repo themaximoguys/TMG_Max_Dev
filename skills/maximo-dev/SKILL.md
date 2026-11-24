@@ -20,7 +20,7 @@ Each step exists for a reason:
 - **Only the environment the user named.** `MAXIMO_PROTECTED=true` environments refuse writes on purpose. The user controls that flag; don't edit `environments/.env.*` yourself.
 - **Change files, not live records.** Edit under `src/`, then deploy. Use `query` for investigation. Arbitrary `call_script` handlers can mutate records, even with GET; dry run and approval are required.
 - **Filtered extracts.** Pass names, `--like TMG`, `--where` or `--limit`. A whole-type pull of OOTB data is thousands of IBM records nobody wants in Git; maxdev refuses it without a filter.
-- **App Designer merges.** Deploy backs up the live screen and merges the repo copy onto it, so UI-made changes survive. Use `--force-replace` only when the user explicitly wants the live screen overwritten.
+- **App Designer merges.** Deploy backs up the live screen and merges the repo copy onto it, so UI-made changes survive. Use `--force-replace` only when the user explicitly wants the live screen overwritten. Attribute-only edits keep the tenant's own layout. To put a screen back exactly as a backup holds it, use `deploy --restore .maxdev/backups/<env>/<stamp>/<APP>.xml` (MCP: `restore_paths`); it is dry run first like every deploy.
 - **No demo/seed data loads** unless asked.
 - **Report what actually happened.** Read the deploy output or receipt (`.maxdev/receipts/<env>/`), and tell the user about any `FAILED` or `not-attempted` rows. Deploy stops at the first failure, so later items didn't run.
 
