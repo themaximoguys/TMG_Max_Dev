@@ -252,7 +252,7 @@ product is not affiliated with or endorsed by any of them and contains no IBM co
 <div align="center">
 <br/>
 
-**Built with ❤️ by [TheMaximoGuys](https://themaximoguys.ai)** · Questions, training or enterprise support: [hello@themaximoguys.ai](mailto:hello@themaximoguys.ai)
+**Built with ❤️ by [TheMaximoGuys](https://themaximoguys.ai)** · Questions, training or enterprise support: [support@themaximoguys.ai](mailto:support@themaximoguys.ai)
 
 ⭐ **If `maxdev` saves you a trip through App Designer, give it a star!**
 
