@@ -19,6 +19,10 @@ from maxdev.client import MaximoClient, Target, resource_id  # noqa: E402
 LIVE_XML = ('<?xml version="1.0" encoding="UTF-8"?>\n<presentation id="WOTRACK" xmlns:x="urn:x">'
             '<page id="p"><tab id="main"><textbox id="t1" dataattribute="WONUM"/>'
             '<textbox id="t_ui" dataattribute="ADDEDINUI"/></tab></page></presentation>')
+# Maximo's own layout: tabs, no space before "/>", blank line after the declaration.
+TABBED_XML = ('<?xml version="1.0" encoding="UTF-8"?>\n\n<presentation id="asset" xmlns:x="urn:x">\n'
+              '\t<page id="p">\n\t\t<section id="s1" label="Details"/>\n'
+              '\t\t<textbox id="t1" dataattribute="ASSETNUM"/>\n\t</page>\n</presentation>')
 REPO_XML = ('<?xml version="1.0" encoding="UTF-8"?>\n<presentation id="WOTRACK">'
             '<page id="p"><tab id="main"><textbox id="t1" dataattribute="WONUM" label="Work Order"/>'
             '<textbox id="t_new" dataattribute="CUSTOMER_EMAIL"/></tab></page></presentation>')
@@ -112,6 +116,27 @@ class AppXmlTests(unittest.TestCase):
         self.assertIn('label="Work Order"', out) # modified
         self.assertIn('xmlns:x="urn:x"', out)    # unused namespace re-injected
         self.assertEqual(appxml.compare(LIVE_XML, out)["loss"], 0)
+
+    def test_patch_text_rewrites_only_changed_tags(self):
+        edited = appxml.pretty(TABBED_XML).replace('label="Details"', 'label="Info &amp; more"')
+        out = appxml.patch_text(TABBED_XML, edited)
+        changed = [(a, b) for a, b in zip(TABBED_XML.splitlines(), out.splitlines()) if a != b]
+        self.assertEqual(changed, [('\t\t<section id="s1" label="Details"/>',
+                                    '\t\t<section id="s1" label="Info &amp; more"/>')])
+        self.assertEqual(appxml.fingerprints(out), appxml.fingerprints(edited))
+
+    def test_patch_text_noop_is_identical(self):
+        self.assertEqual(appxml.patch_text(TABBED_XML, appxml.pretty(TABBED_XML)), TABBED_XML)
+
+    def test_patch_text_declines_structural_change(self):
+        added = appxml.pretty(TABBED_XML).replace('</page>', '<textbox id="t2" dataattribute="SITEID" /></page>')
+        self.assertIsNone(appxml.patch_text(TABBED_XML, added))
+
+    def test_patch_text_keeps_root_namespace_on_root_edit(self):
+        edited = appxml.pretty(TABBED_XML).replace('id="asset"', 'id="asset" beanclass="X"')
+        out = appxml.patch_text(TABBED_XML, edited)
+        self.assertIn('xmlns:x="urn:x"', out)
+        self.assertIn('beanclass="X"', out)
 
 
 class EngineTests(Base):
@@ -214,6 +239,39 @@ class EngineTests(Base):
         r = engine.deploy(self.s, [(t, path)], apply=True)
         self.assertEqual(r["results"][0]["action"], "FAILED")
         self.assertIn("read-back", r["results"][0]["error"])
+
+    def test_appxml_pull_edit_push_keeps_live_layout(self):
+        self.fake.seed("mxapipresentation", {"app": "ASSET", "presentation": TABBED_XML})
+        t = registry.get("appxml")
+        engine.extract(self.s, "appxml", ["ASSET"])
+        path = store.find_local(t, "ASSET")
+        path.write_text(path.read_text().replace('label="Details"', 'label="Asset details"'))
+        dry = engine.deploy(self.s, [(t, path)])
+        self.assertEqual(dry["results"][0]["action"], "would-update", dry)
+        self.assertEqual(dry["results"][0]["compare"]["format"], "live-preserved")
+        r = engine.deploy(self.s, [(t, path)], apply=True)
+        self.assertEqual(r["results"][0]["action"], "updated", r)
+        live = self.fake.db["mxapipresentation"][0]["presentation"]
+        self.assertEqual(live, TABBED_XML.replace('label="Details"', 'label="Asset details"'))
+
+    def test_appxml_unreadable_live_screen_is_not_new(self):
+        # Row exists but the CLOB is not returned and TMG_EXPORT_PRES is not deployed.
+        self.fake.seed("mxapipresentation", {"app": "ASSET"})
+        t = registry.get("appxml")
+        path, _ = store.save_appxml(t, "ASSET", TABBED_XML)
+        r = engine.deploy(self.s, [(t, path)])
+        self.assertEqual(r["results"][0]["action"], "FAILED", r)
+        self.assertIn("fallback failed", r["results"][0]["error"])
+
+    def test_foreign_host_href_goes_to_configured_base(self):
+        c = self.s.client
+        base = FakeMaximo.base.rstrip("/")
+        host = base.split("//", 1)[1].split("/", 1)[0]
+        other = base.replace(host, "other-route.example.com", 1)
+        self.assertEqual(c._url(f"{other}/api/os/mxapiasset/_QQ--?lean=1"),
+                         f"{base}/api/os/mxapiasset/_QQ--?lean=1")
+        self.assertEqual(c._url(f"{base}/api/os/x"), f"{base}/api/os/x")
+        self.assertEqual(c._url("https://elsewhere.example.com/unrelated"), "https://elsewhere.example.com/unrelated")
 
     def test_stop_on_first_failure(self):
         t = registry.get("domain")

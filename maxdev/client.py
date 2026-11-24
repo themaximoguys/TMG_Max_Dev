@@ -17,7 +17,7 @@ import json
 import time
 from dataclasses import dataclass
 from typing import Any, Iterable
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 import requests
 
@@ -91,7 +91,16 @@ class MaximoClient:
 
     # ── low level ──────────────────────────────────────────────────────────
     def _url(self, path: str) -> str:
-        return path if path.startswith("http") else f"{self.base}/{path.lstrip('/')}"
+        if not path.startswith("http"):
+            return f"{self.base}/{path.lstrip('/')}"
+        # Maximo builds hrefs from its own idea of the host (e.g. a route such as
+        # `maxdemo-all...`), which can differ from the configured base URL. Send every
+        # call to the configured host so auth, TLS and proxies stay the same.
+        href, base = urlsplit(path), urlsplit(self.base)
+        if href.netloc != base.netloc and href.path.startswith(base.path.rstrip("/") + "/"):
+            rest = href.path[len(base.path.rstrip("/")):]
+            return f"{self.base}{rest}" + (f"?{href.query}" if href.query else "")
+        return path
 
     def request(self, method: str, path: str, *, params: dict | None = None, body: Any = None,
                 headers: dict | None = None, raw: bool = False, retries: int = 2):

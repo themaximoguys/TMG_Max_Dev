@@ -12,7 +12,7 @@ ui = mx.getSystemUserInfo()
 app = None
 try:
     app = request.getQueryParam("app")
-except:
+except Exception:
     app = None
 
 # App names are [A-Z0-9_]; reject anything else instead of building SQL from it.

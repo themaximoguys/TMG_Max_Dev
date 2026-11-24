@@ -106,24 +106,37 @@ def _live_presentation(s: Session, os_name: str, app: str) -> str | None:
     # Some tenants expose MAXPRESENTATION without the CLOB; fall back to the bootstrap script.
     try:
         txt = s.client.call_script("TMG_EXPORT_PRES", params={"app": app.upper()}, method="GET")
-        if isinstance(txt, str) and txt.lstrip().startswith("<"):
-            return txt
-    except MaximoError:
-        pass
+    except MaximoError as e:
+        txt, why = None, str(e)
+    else:
+        why = f"TMG_EXPORT_PRES answered {str(txt)[:120]!r}"
+    if isinstance(txt, str) and txt.lstrip().startswith("<"):
+        return txt
+    if rows:
+        # The app exists but its screen could not be read. Never report it as missing:
+        # deploy would then treat it as NEW and skip the loss check and the backup.
+        raise MaximoError(502, f"{app}: {os_name} returned no PRESENTATION and the fallback failed ({why})",
+                          os_name)
     return None
 
 
 def _extract_appxml(s, t, os_name, where, limit):
     apps = [r["app"] for r in s.client.query(os_name, where=where, select="app", max_records=limit)]
     files, written = [], 0
+    skipped = []
     for app in apps:
-        xml = _live_presentation(s, os_name, app)
+        try:
+            xml = _live_presentation(s, os_name, app)
+        except MaximoError as e:
+            skipped.append({"app": app, "error": str(e)})
+            continue
         if not xml:
             continue
         path, changed = store.save_appxml(t, app, xml)
         files.append(_rel(path))
         written += changed
-    return {"type": t.id, "os": os_name, "records": len(apps), "written": written, "files": files}
+    return {"type": t.id, "os": os_name, "records": len(apps), "written": written, "files": files,
+            "skipped": len(skipped), "skipped_detail": skipped[:20]}
 
 
 # ── resolve local files ───────────────────────────────────────────────────
@@ -236,6 +249,7 @@ def deploy(s: Session, items: list[tuple], apply: bool = False, force_replace: b
 
 def _deploy_appxml(s, os_name, rec, apply, force_replace, stamp) -> dict:
     app, repo_xml = rec["app"], rec["presentation"]
+    merged = False
     live = _live_presentation(s, os_name, app)
     if live is None:
         cmp = {"verdict": "NEW", "loss": 0}
@@ -246,10 +260,20 @@ def _deploy_appxml(s, os_name, rec, apply, force_replace, stamp) -> dict:
         if cmp["loss"] and not force_replace:
             payload, stats = ax.merge(live, repo_xml)
             cmp["merge"] = stats
+            merged = True
+    if live is not None:
+        # Attribute-only edits: rewrite just the changed start tags in the live text, so the
+        # tenant keeps its own layout and the write is as small as the edit.
+        minimal = ax.patch_text(live, payload)
+        if minimal is not None:
+            cmp["format"] = "live-preserved"
+            payload = minimal
+        else:
+            cmp["format"] = "reserialised"
     out = {"compare": cmp}
     if not apply:
         out["action"] = ("would-create" if live is None else
-                         "would-merge" if payload is not repo_xml else "would-update")
+                         "would-merge" if merged else "would-update")
         return out
     if live is not None:
         bdir = STATE / "backups" / s.env / stamp
@@ -264,7 +288,7 @@ def _deploy_appxml(s, os_name, rec, apply, force_replace, stamp) -> dict:
     after = _live_presentation(s, os_name, app)
     if ax.fingerprints(after) != ax.fingerprints(payload):
         raise MaximoError(500, f"{app}: read-back does not match what was sent (write silently dropped?)", os_name)
-    out["action"] = "created" if live is None else ("merged" if payload is not repo_xml else "updated")
+    out["action"] = "created" if live is None else ("merged" if merged else "updated")
     return out
 
 
@@ -386,11 +410,12 @@ def doctor(s: Session) -> dict:
             unauth = [o for o, v in probes.items() if v == "unauthorized"]
             rows.append({"type": t.id, "os": " | ".join(f"{o}:{v}" for o, v in probes.items()),
                          "status": "NO-AUTH" if unauth else "MISSING", "registry_status": t.status})
-    script = False
+    script: bool | str = False
     try:
         s.client.call_script("TMG_EXPORT_PRES", params={"app": "STARTCNTR"}, method="GET")
         script = True
-    except MaximoError:
-        pass
+    except MaximoError as e:
+        # Missing script (404) is the normal "not bootstrapped" case; anything else is reported.
+        script = False if e.status == 404 else f"error: {e}"[:300]
     return {"env": s.env, "user": who.get("userName") or who.get("personid"), "protected": s.protected,
             "types": rows, "bootstrap": {"TMG_EXPORT_PRES": script}}

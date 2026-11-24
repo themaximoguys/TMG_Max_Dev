@@ -9,6 +9,9 @@ from the reference repo's MAS 9 migration work:
   merge()     live XML is the skeleton; repo elements MODIFY matching ones and
               ADD new ones after their nearest preceding shared sibling; live-only
               elements are KEPT. Identity is (tag, id, ordinal) scoped to siblings.
+  patch_text() when only attributes changed, rewrite just those start tags in the
+              live text so Maximo keeps its own layout (tabs, blank lines) and a
+              one-label edit stays a one-line change on the tenant.
 """
 from __future__ import annotations
 
@@ -152,3 +155,52 @@ def merge(live: str, repo: str) -> tuple[str, dict]:
     out = pretty(_reinject_ns(live, DECL + ET.tostring(base, encoding="unicode")))
     stats["merged_elements"] = sum(1 for _ in _root(out).iter())
     return out, stats
+
+
+# ── minimal-diff write ────────────────────────────────────────────────────
+_TOKEN = re.compile(
+    r"<!--.*?-->|<!\[CDATA\[.*?\]\]>|<\?.*?\?>|<![^>]*>|</[^>]*>"
+    r"|<([^\s/>!?]+)((?:\s+[^\s=/>]+\s*=\s*(?:\"[^\"]*\"|'[^']*'))*)\s*(/?)>", re.S)
+_XMLNS_ATTR = re.compile(r'\s+xmlns(?::[\w.-]+)?\s*=\s*(?:"[^"]*"|\'[^\']*\')')
+
+
+def _escape_attr(v: str) -> str:
+    return (v.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+            .replace("\n", "&#10;").replace("\r", "&#13;").replace("\t", "&#09;"))
+
+
+def _shape(root: ET.Element):
+    return [(e.tag, (e.text or "").strip(), (e.tail or "").strip()) for e in root.iter()]
+
+
+def patch_text(live: str, new: str) -> str | None:
+    """Return `live` with only the start tags whose attributes differ in `new` rewritten.
+
+    Applies only when both documents have the same elements in the same order with
+    the same text (an attribute-only edit). Returns None otherwise, or if anything
+    about the live text cannot be mapped safely; callers then send `new` as is."""
+    try:
+        lroot, nroot = _root(live), _root(new)
+    except ET.ParseError:
+        return None
+    if _shape(lroot) != _shape(nroot):
+        return None
+    lels, nels = list(lroot.iter()), list(nroot.iter())
+    if any("{" in e.tag or any("{" in k for k in e.attrib) for e in lels + nels):
+        return None                                   # namespaced names: not worth the risk
+    starts = [m for m in _TOKEN.finditer(live) if m.group(1)]
+    if [m.group(1) for m in starts] != [e.tag for e in lels]:
+        return None
+    out, pos, changed = [], 0, 0
+    for m, le, ne in zip(starts, lels, nels):
+        if le.attrib == ne.attrib:
+            continue
+        xmlns = "".join(_XMLNS_ATTR.findall(m.group(2)))
+        attrs = "".join(f' {k}="{_escape_attr(v)}"' for k, v in ne.attrib.items())
+        out += [live[pos:m.start()], f"<{ne.tag}{xmlns}{attrs}{'/' if m.group(3) else ''}>"]
+        pos, changed = m.end(), changed + 1
+    out.append(live[pos:])
+    patched = "".join(out)
+    if fingerprints(patched) != fingerprints(new) or _shape(_root(patched)) != _shape(nroot):
+        return None
+    return patched
